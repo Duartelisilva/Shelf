@@ -1,0 +1,12 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
+.vs/
+.env
+*.local
+library.json
+posters/
