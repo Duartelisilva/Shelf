@@ -27,7 +27,6 @@ function App(): React.JSX.Element {
           </a>
         </div>
       </div>
-      <p className="text-3xl font-bold text-sky-400">Tailwind works</p>
       <Versions></Versions>
     </>
   )
