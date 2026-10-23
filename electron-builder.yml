@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: shelf
+appId: com.duartelisilva.shelf
+productName: Shelf
 directories:
   buildResources: build
 files:
@@ -13,6 +13,9 @@ asarUnpack:
   - resources/**
 win:
   executableName: shelf
+  target: portable
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
