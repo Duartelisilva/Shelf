@@ -23,12 +23,18 @@ export interface V1Files {
 export interface ImportResult {
   items: MediaItem[]
   warnings: string[]
-  genreCounts: Record<string, number> // what V1 "Saga" values became, for the preview
+  sagaCounts: Record<string, number> // every V1 "Saga" value and how often it appears
+  genreCounts: Record<string, number> // the genres that resulted, after the mapping
 }
+
+// What a V1 "Saga" value really was. V1 used the one field for genres
+// ("Horror") and for groupings ("Marvel"), so the user decides per value.
+export type SagaKind = 'genre' | 'collection'
 
 export interface ImportOptions {
   now?: string
   newId?: () => string
+  sagaAs?: Record<string, SagaKind> // per Saga value; anything not listed is a genre
 }
 
 type Raw = Record<string, unknown>
@@ -44,6 +50,8 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
   const warnings: string[] = []
   const items: MediaItem[] = []
   const seen = new Set<string>()
+  const sagaCounts: Record<string, number> = {}
+  const sagaAs = options.sagaAs ?? {}
 
   const add = (item: MediaItem, source: string): void => {
     const key = duplicateKey(item)
@@ -61,7 +69,7 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
     [files.books, 'book', 'books']
   ] as const) {
     for (const raw of asRecords(list, source, warnings)) {
-      const item = convert(raw, type, null, now, newId(), source, warnings)
+      const item = convert(raw, type, null, now, newId(), source, warnings, sagaAs, sagaCounts)
       if (item) add(item, source)
     }
   }
@@ -72,7 +80,7 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
       warnings.push(`wishlist: unknown type for "${text(raw, 'Title') ?? '?'}", skipped`)
       continue
     }
-    const item = convert(raw, type, 'wishlist', now, newId(), 'wishlist', warnings)
+    const item = convert(raw, type, 'wishlist', now, newId(), 'wishlist', warnings, sagaAs, sagaCounts)
     if (item) add(item, 'wishlist')
   }
 
@@ -80,7 +88,7 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
   for (const item of items) {
     for (const genre of item.genres) genreCounts[genre] = (genreCounts[genre] ?? 0) + 1
   }
-  return { items, warnings, genreCounts }
+  return { items, warnings, sagaCounts, genreCounts }
 }
 
 // Adds imported items to an existing library, skipping ones already there,
@@ -105,7 +113,9 @@ function convert(
   now: string,
   id: string,
   source: string,
-  warnings: string[]
+  warnings: string[],
+  sagaAs: Record<string, SagaKind>,
+  sagaCounts: Record<string, number>
 ): MediaItem | null {
   const title = normalize(text(raw, 'Title'))
   if (!title) {
@@ -116,6 +126,8 @@ function convert(
   const dates = watchDates(raw, title, warnings)
   const saga = normalize(text(raw, 'Saga'))
   const year = num(raw, 'Year')
+  const sagaKind: SagaKind = sagaAs[saga] ?? 'genre'
+  if (saga) sagaCounts[saga] = (sagaCounts[saga] ?? 0) + 1
   const item: MediaItem = {
     id,
     type,
@@ -123,7 +135,7 @@ function convert(
     // a recorded date (something seen years ago may have no date at all).
     status: forcedStatus ?? 'finished',
     title,
-    genres: saga ? [saga] : [],
+    genres: saga && sagaKind === 'genre' ? [saga] : [],
     dates,
     isFavorite: get(raw, 'IsFavorite') === true,
     createdAt: now
@@ -150,6 +162,10 @@ function convert(
     if (author) item.author = author
     const order = num(raw, 'BookNumber')
     if (order) item.franchiseOrder = order
+  }
+  // A collection that just repeats the franchise name adds nothing.
+  if (saga && sagaKind === 'collection' && saga.toLowerCase() !== (item.franchise ?? '').toLowerCase()) {
+    item.collection = saga
   }
   return item
 }

@@ -18,9 +18,12 @@ export interface MediaItem {
   genres: string[] // many per item: ["Horror", "Thriller"]  (V1 "Saga")
   franchise?: string // one per item: "The Lord of the Rings"
   franchiseOrder?: number // position inside the franchise / book series
+  collection?: string // a group above franchises or people: "Marvel", "Keanu Reeves"
 
   // Tracking
-  dates: string[] // ISO dates (yyyy-mm-dd) each time it was seen or read
+  // ISO dates (yyyy-mm-dd) each time it was seen or read. May be empty: an
+  // item can be finished without a date (seen long ago). Status is the truth.
+  dates: string[]
   rating?: number // 0 to 10, half points allowed
   isFavorite: boolean
   notes?: string

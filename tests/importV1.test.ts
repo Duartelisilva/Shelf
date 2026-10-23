@@ -79,6 +79,33 @@ describe('importV1', () => {
   })
 })
 
+describe('Saga mapping', () => {
+  const sample = [
+    { Title: 'Iron Man', Year: 2008, Saga: 'Marvel', Franchise: 'Iron Man', WatchDates: [] },
+    { Title: 'Avengers', Year: 2012, Saga: 'Marvel', Franchise: 'Avengers', WatchDates: [] },
+    { Title: 'Resident Evil', Year: 2002, Saga: 'Resident Evil', Franchise: 'Resident Evil', WatchDates: [] },
+    { Title: 'Alien', Year: 1979, Saga: 'Horror', Franchise: 'Alien', WatchDates: [] }
+  ]
+
+  it('counts every Saga value for the preview', () => {
+    expect(importV1({ movies: sample }, opts).sagaCounts).toEqual({ Marvel: 2, 'Resident Evil': 1, Horror: 1 })
+  })
+
+  it('treats unmapped values as genres', () => {
+    expect(importV1({ movies: sample }, opts).items[3]).toMatchObject({ genres: ['Horror'] })
+  })
+
+  it('turns values marked as collection into a collection, not a genre', () => {
+    const { items, genreCounts } = importV1(
+      { movies: sample },
+      { ...opts, sagaAs: { Marvel: 'collection', 'Resident Evil': 'collection' } }
+    )
+    expect(items[0]).toMatchObject({ collection: 'Marvel', genres: [] })
+    expect(items[2].collection).toBeUndefined() // same as its franchise
+    expect(genreCounts).toEqual({ Horror: 1 })
+  })
+})
+
 describe('mergeIntoLibrary', () => {
   it('does not add items that are already in the library', () => {
     const first = importV1({ movies }, opts)
