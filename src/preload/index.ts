@@ -1,12 +1,20 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { CHANNELS } from '../shared/api'
+import type { ShelfApi } from '../shared/api'
 
-// Custom APIs for renderer
-const api = {}
+// The only functions the window is allowed to call.
+const api: ShelfApi = {
+  library: {
+    load: () => ipcRenderer.invoke(CHANNELS.libraryLoad),
+    save: (library) => ipcRenderer.invoke(CHANNELS.librarySave, library)
+  },
+  importV1: {
+    pickFolder: () => ipcRenderer.invoke(CHANNELS.importPick),
+    commit: (sagaAs) => ipcRenderer.invoke(CHANNELS.importCommit, sagaAs)
+  }
+}
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
