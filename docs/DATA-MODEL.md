@@ -38,3 +38,21 @@ a movie seen years ago may simply have no date. Wishlist items stay `wishlist`.
 
 `status` is the source of truth for "seen", not `dates`. Items without a date
 count in the totals and top lists, and are left out only of the per-year chart.
+
+## Validation
+
+- Every movie, series and book needs a year, above 1900 and below 2100 (`MIN_YEAR`
+  and `MAX_YEAR` in `src/shared/rules.ts`, a one-line change if that ever needs to move).
+- Watch and read dates follow the same range, must be real calendar dates and cannot be
+  in the future. They are typed as `dd/mm/yy` (or `dd/mm/yyyy`), shown as `dd/mm/yyyy`
+  and stored as ISO. A two-digit year always means 20xx; dates before 2000 need all four
+  digits (typing `1/1/95` is refused with that hint instead of being guessed).
+- A series end year cannot be before its start year.
+- Old data is never rejected: the importer keeps items with a bad year and warns,
+  and the library offers a "needs attention" filter.
+
+## Images
+
+Each item has at most one image (`image`), a copy stored in the app's own folder
+under a unique name, so the original file can be deleted. Replacing or removing an
+image deletes the old copy. Copies that no item uses are cleaned up at startup.

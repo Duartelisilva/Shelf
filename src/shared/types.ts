@@ -27,7 +27,8 @@ export interface MediaItem {
   rating?: number // 0 to 10, half points allowed
   isFavorite: boolean
   notes?: string
-  color?: string // optional accent override, "#rrggbb"
+  color?: string // optional accent override, "#rrggbb" (imported from V1)
+  image?: string // file name of the card image in the app's images folder; one per item
 
   // Type-specific (only meaningful for that type)
   yearEnd?: number // series
@@ -43,8 +44,7 @@ export interface MediaItem {
 
 export interface ExternalMeta {
   source: 'tmdb' | 'openlibrary'
-  externalId: string
-  posterFile?: string // cached image file name, stored locally
+  externalId: string // an approved poster is saved as the item's own image
   overview?: string
   approvedAt: string // set only after the user approved the match
 }

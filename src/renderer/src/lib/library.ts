@@ -1,0 +1,180 @@
+// Everything the Library screen decides about the data: which items are
+// visible, how they are grouped, how they are colored. Pure functions, no
+// React, so it is all covered by tests.
+
+import { itemProblems } from '../../../shared/rules'
+import type { MediaItem, MediaType } from '../../../shared/types'
+
+export type Section = 'library' | MediaType | 'wishlist' | 'favorites'
+export type GroupBy = 'franchise' | 'genre' | 'collection' | 'none'
+
+export const SECTION_TITLES: Record<Section, string> = {
+  library: 'Library',
+  movie: 'Movies',
+  series: 'Series',
+  book: 'Books',
+  wishlist: 'Wishlist',
+  favorites: 'Favorites'
+}
+
+export interface Filters {
+  section: Section
+  query: string
+  genre: string | null
+  favoritesOnly: boolean
+  attentionOnly?: boolean // only items with a missing or invalid year or date
+}
+
+export interface Shelf {
+  id: string
+  title: string
+  items: MediaItem[]
+}
+
+// Which items a sidebar entry shows. Movies, Series and Books hold what you
+// have seen or are going through; the wishlist has its own entry.
+export function sectionItems(items: MediaItem[], section: Section): MediaItem[] {
+  switch (section) {
+    case 'library':
+      return items
+    case 'wishlist':
+      return items.filter((i) => i.status === 'wishlist')
+    case 'favorites':
+      return items.filter((i) => i.isFavorite)
+    default:
+      return items.filter((i) => i.type === section && i.status !== 'wishlist')
+  }
+}
+
+export function sectionCounts(items: MediaItem[]): Record<Section, number> {
+  const sections = Object.keys(SECTION_TITLES) as Section[]
+  const counts = {} as Record<Section, number>
+  for (const section of sections) counts[section] = sectionItems(items, section).length
+  return counts
+}
+
+// Lowercase and without accents, so "amelie" finds "Amélie".
+export function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+export function matchesQuery(item: MediaItem, query: string): boolean {
+  const words = normalizeText(query.trim()).split(/\s+/).filter(Boolean)
+  if (words.length === 0) return true
+  const haystack = normalizeText(
+    [item.title, item.franchise, item.collection, item.author, item.notes, ...item.genres]
+      .filter(Boolean)
+      .join(' ')
+  )
+  return words.every((word) => haystack.includes(word))
+}
+
+export function applyFilters(items: MediaItem[], filters: Filters): MediaItem[] {
+  return sectionItems(items, filters.section).filter(
+    (item) =>
+      (!filters.favoritesOnly || item.isFavorite) &&
+      (!filters.attentionOnly || itemProblems(item).length > 0) &&
+      (!filters.genre || item.genres.includes(filters.genre)) &&
+      matchesQuery(item, filters.query)
+  )
+}
+
+export function genreOptions(items: MediaItem[]): { name: string; count: number }[] {
+  const counts = new Map<string, number>()
+  for (const item of items) for (const genre of item.genres) counts.set(genre, (counts.get(genre) ?? 0) + 1)
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+}
+
+const byTitle = (a: MediaItem, b: MediaItem): number => a.title.localeCompare(b.title)
+
+// Order inside a franchise: its own numbering first, then release year.
+const byOrder = (a: MediaItem, b: MediaItem): number =>
+  (a.franchiseOrder ?? Infinity) - (b.franchiseOrder ?? Infinity) ||
+  (a.year ?? 0) - (b.year ?? 0) ||
+  byTitle(a, b)
+
+// Splits items into shelves. An item with several genres appears on each of
+// its genre shelves (the totals elsewhere still count it once).
+export function groupItems(
+  items: MediaItem[],
+  groupBy: GroupBy,
+  options: { wishlistShelf: boolean }
+): Shelf[] {
+  const wishlist = options.wishlistShelf ? items.filter((i) => i.status === 'wishlist') : []
+  const rest = options.wishlistShelf ? items.filter((i) => i.status !== 'wishlist') : items
+  const shelves: Shelf[] = []
+
+  if (groupBy === 'none') {
+    if (rest.length) shelves.push({ id: 'all', title: 'All', items: [...rest].sort(byTitle) })
+  } else {
+    const keysOf = (item: MediaItem): string[] =>
+      groupBy === 'franchise'
+        ? item.franchise ? [item.franchise] : []
+        : groupBy === 'collection'
+          ? item.collection ? [item.collection] : []
+          : item.genres
+    const empty = { franchise: 'Standalone', collection: 'No collection', genre: 'No genre' }[groupBy]
+
+    const groups = new Map<string, MediaItem[]>()
+    const ungrouped: MediaItem[] = []
+    for (const item of rest) {
+      const keys = keysOf(item)
+      if (keys.length === 0) ungrouped.push(item)
+      for (const key of keys) groups.set(key, [...(groups.get(key) ?? []), item])
+    }
+    const ordered = [...groups.entries()].sort(([a, ia], [b, ib]) =>
+      groupBy === 'genre' ? ib.length - ia.length || a.localeCompare(b) : a.localeCompare(b)
+    )
+    for (const [name, members] of ordered) {
+      shelves.push({
+        id: `${groupBy}:${name}`,
+        title: name,
+        items: [...members].sort(groupBy === 'franchise' ? byOrder : byTitle)
+      })
+    }
+    if (ungrouped.length) {
+      shelves.push({ id: `${groupBy}:none`, title: empty, items: ungrouped.sort(byTitle) })
+    }
+  }
+
+  if (wishlist.length) shelves.push({ id: 'wishlist', title: 'Wishlist', items: wishlist.sort(byTitle) })
+  return shelves
+}
+
+// Items without their own color get one from this palette. The color is chosen
+// from the franchise name when there is one, so a franchise looks consistent.
+const PALETTE = ['#234a73', '#7a2e2e', '#1f6554', '#8a5a1c', '#4a5a22', '#5f3a80', '#7a2450', '#3b4a6b']
+
+export function posterColor(item: MediaItem): string {
+  if (item.color) return item.color
+  const seed = item.franchise ?? item.title
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  return PALETTE[hash % PALETTE.length]
+}
+
+// Black or white text, whichever is easier to read on this background.
+export function readableOn(hex: string): '#0f1115' | '#ffffff' {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const channel = (c: number): number => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+  const luminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+  return luminance > 0.4 ? '#0f1115' : '#ffffff'
+}
+
+export function lastDate(item: MediaItem): string | undefined {
+  return [...item.dates].sort().pop()
+}
+
+// "2026-08-10" becomes "10/08/2026" (no time zone maths, it is just text).
+export function formatDate(iso: string): string {
+  const [year, month, day] = iso.split('-')
+  return `${day}/${month}/${year}`
+}
+
+// Card images are served by the app itself (see src/main/images.ts).
+export const imageUrl = (fileName: string): string => `shelf-image://img/${encodeURIComponent(fileName)}`

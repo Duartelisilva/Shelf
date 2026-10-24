@@ -8,7 +8,9 @@ export const CHANNELS = {
   libraryLoad: 'library:load',
   librarySave: 'library:save',
   importPick: 'importV1:pick',
-  importCommit: 'importV1:commit'
+  importCommit: 'importV1:commit',
+  imagePick: 'image:pick',
+  imageRemove: 'image:remove'
 } as const
 
 export interface LoadResult {
@@ -34,10 +36,17 @@ export interface ImportSummary {
   library: Library
 }
 
+// Result of choosing an image for an item: its stored file name, or a reason it failed.
+export type ImagePick = { fileName: string } | { error: string } | null
+
 export interface ShelfApi {
   library: {
     load(): Promise<LoadResult>
     save(library: Library): Promise<void>
+  }
+  images: {
+    pick(itemId: string): Promise<ImagePick>
+    remove(fileName: string): Promise<void>
   }
   importV1: {
     pickFolder(): Promise<V1Scan | null>

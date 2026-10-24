@@ -116,3 +116,15 @@ describe('mergeIntoLibrary', () => {
     expect(result.skipped).toBe(2)
   })
 })
+
+describe('year and date checks', () => {
+  it('imports items with a missing or out-of-range year but warns about them', () => {
+    const { items, warnings } = importV1(
+      { movies: [{ Title: 'No Year', WatchDates: [] }, { Title: 'Too Old', Year: 1850, WatchDates: [] }, { Title: 'Fine', Year: 1999, WatchDates: [] }] },
+      opts
+    )
+    expect(items).toHaveLength(3)
+    expect(warnings).toHaveLength(2)
+    expect(warnings[0]).toContain('No Year')
+  })
+})

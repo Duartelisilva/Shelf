@@ -2,6 +2,7 @@
 // Pure functions only (no Electron, no file access), so they are easy to test.
 // Reading the files and showing the preview happens elsewhere.
 
+import { itemProblems } from './rules'
 import type { Library, MediaItem, MediaType } from './types'
 
 // V1 saved these files next to the exe. Its repository named them after the
@@ -163,6 +164,8 @@ function convert(
     const order = num(raw, 'BookNumber')
     if (order) item.franchiseOrder = order
   }
+  // The item is still imported; the warning tells you what to fix in Shelf.
+  for (const problem of itemProblems(item)) warnings.push(`${source}: "${title}": ${problem}`)
   // A collection that just repeats the franchise name adds nothing.
   if (saga && sagaKind === 'collection' && saga.toLowerCase() !== (item.franchise ?? '').toLowerCase()) {
     item.collection = saga

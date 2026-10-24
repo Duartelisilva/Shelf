@@ -1,23 +1,37 @@
-// Connects the window to storage and the importer. Every handler here is the
-// only way the UI can read or write your data.
+// Connects the window to storage, images and the importer. Every handler here
+// is the only way the UI can read or write your data.
 
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { CHANNELS } from '../shared/api'
-import type { ImportSummary, V1Scan } from '../shared/api'
+import type { ImagePick, ImportSummary, V1Scan } from '../shared/api'
 import { importV1, mergeIntoLibrary } from '../shared/importV1'
 import type { SagaKind } from '../shared/importV1'
 import type { Library } from '../shared/types'
+import { createImages } from './images'
 import { createStorage } from './storage'
 import { readV1Folder } from './v1files'
 
 export function registerIpc(): void {
   const storage = createStorage(app.getPath('userData'))
+  const images = createImages()
   // The folder is remembered here, not sent back by the UI, so the window can
   // never ask the app to read an arbitrary path.
   let pendingFolder: string | null = null
 
-  ipcMain.handle(CHANNELS.libraryLoad, () => storage.load())
+  ipcMain.handle(CHANNELS.libraryLoad, async () => {
+    const result = await storage.load()
+    // Delete image copies no item uses. Skipped when the library could not be
+    // read normally or is empty, so a damaged file can never wipe your images.
+    if (!result.notice && result.library.items.length > 0) {
+      const used = result.library.items.flatMap((i) => (i.image ? [i.image] : []))
+      await images.store.removeUnused(new Set(used))
+    }
+    return result
+  })
   ipcMain.handle(CHANNELS.librarySave, (_event, library: Library) => storage.save(library))
+
+  ipcMain.handle(CHANNELS.imagePick, (_event, itemId: string): Promise<ImagePick> => images.pick(itemId))
+  ipcMain.handle(CHANNELS.imageRemove, (_event, fileName: string) => images.store.remove(fileName))
 
   ipcMain.handle(CHANNELS.importPick, async (): Promise<V1Scan | null> => {
     const options = {
