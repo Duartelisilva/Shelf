@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { itemProblems } from '../../../shared/rules'
 import type { MediaItem } from '../../../shared/types'
-import { bulkGenre, cleanGenre, distinct, removeItem, replaceItem } from '../lib/edit'
+import { bulkGenre, cleanGenre, removeItem, replaceItem } from '../lib/edit'
 import { SECTION_TITLES, applyFilters, genreOptions, groupItems } from '../lib/library'
-import type { GroupBy, Section, SortBy } from '../lib/library'
+import type { GenreFilter, GroupBy, Section, SortBy } from '../lib/library'
+import { vocabularies } from '../lib/vocab'
 import { BulkBar } from './BulkBar'
 import { DetailPanel } from './DetailPanel'
 import { ShelfView } from './ShelfView'
@@ -19,9 +20,17 @@ interface Props {
   onImport: () => void
 }
 
-export function LibraryScreen({ items, section, selectedId, onSelect, onChange, onAdd, onImport }: Props): React.JSX.Element {
+export function LibraryScreen({
+  items,
+  section,
+  selectedId,
+  onSelect,
+  onChange,
+  onAdd,
+  onImport
+}: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
-  const [genre, setGenre] = useState<string | null>(null)
+  const [genre, setGenre] = useState<GenreFilter | null>(null)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [groupBy, setGroupBy] = useState<GroupBy>('franchise')
   const [sortBy, setSortBy] = useState<SortBy>('title')
@@ -49,15 +58,25 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
     [items, section]
   )
   const genres = useMemo(() => genreOptions(inSection), [inSection])
-  const allGenres = useMemo(() => genreOptions(items).map((g) => g.name), [items])
-  const franchises = useMemo(() => distinct(items.map((i) => i.franchise)), [items])
-  const collections = useMemo(() => distinct(items.map((i) => i.collection)), [items])
+  // The names used by each type, for suggestions. Types never share them.
+  const vocab = useMemo(() => vocabularies(items), [items])
   // A genre picked in one section may not exist in another.
-  const activeGenre = genre && genres.some((g) => g.name === genre) ? genre : null
-  const needAttention = useMemo(() => items.filter((i) => itemProblems(i).length > 0).length, [items])
+  const activeGenre =
+    genre && genres.some((g) => g.type === genre.type && g.name === genre.name) ? genre : null
+  const needAttention = useMemo(
+    () => items.filter((i) => itemProblems(i).length > 0).length,
+    [items]
+  )
   const showAttention = attentionOnly && needAttention > 0
   const visible = useMemo(
-    () => applyFilters(items, { section, query, genre: activeGenre, favoritesOnly, attentionOnly: showAttention }),
+    () =>
+      applyFilters(items, {
+        section,
+        query,
+        genre: activeGenre,
+        favoritesOnly,
+        attentionOnly: showAttention
+      }),
     [items, section, query, activeGenre, favoritesOnly, showAttention]
   )
   const shelves = useMemo(
@@ -77,11 +96,23 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
     setSelectMode(on)
     setChecked(new Set())
   }
+  // Genres belong to one type, so a bulk change needs a selection of one type.
+  const checkedTypes = useMemo(
+    () => new Set(items.filter((i) => checked.has(i.id)).map((i) => i.type)),
+    [items, checked]
+  )
+  const bulkType = checkedTypes.size === 1 ? [...checkedTypes][0] : null
+  const bulkBlocked =
+    checkedTypes.size > 1
+      ? 'Genres are separate for movies, series and books: select one kind at a time.'
+      : null
   const applyBulk = (input: string, mode: 'add' | 'remove'): void => {
-    const name = cleanGenre(input, allGenres)
+    if (!bulkType) return
+    const known = vocab[bulkType].genres
+    const name = cleanGenre(input, known)
     if (!name || checked.size === 0) return
     const verb = mode === 'add' ? `Added “${name}” to` : `Removed “${name}” from`
-    onChange(bulkGenre(items, checked, name, mode, allGenres), `${verb} ${checked.size} items`)
+    onChange(bulkGenre(items, checked, name, mode, known), `${verb} ${checked.size} items`)
   }
 
   return (
@@ -119,9 +150,14 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
           {needAttention > 0 && (
             <div className="flex items-center gap-3 rounded-lg bg-amber-900/40 px-4 py-2.5 text-amber-200">
               <span>
-                {needAttention === 1 ? '1 item has' : `${needAttention} items have`} a missing or invalid year or date.
+                {needAttention === 1 ? '1 item has' : `${needAttention} items have`} a missing or
+                invalid year or date.
               </span>
-              <button type="button" onClick={() => setAttentionOnly(!showAttention)} className="cursor-pointer font-bold underline">
+              <button
+                type="button"
+                onClick={() => setAttentionOnly(!showAttention)}
+                className="cursor-pointer font-bold underline"
+              >
                 {showAttention ? 'Show everything' : 'Show them'}
               </button>
             </div>
@@ -131,10 +167,18 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
             <div className="flex flex-col items-start gap-3 text-muted">
               <p>Your library is empty.</p>
               <div className="flex gap-3">
-                <button type="button" onClick={onAdd} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground">
+                <button
+                  type="button"
+                  onClick={onAdd}
+                  className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground"
+                >
                   + Add your first item
                 </button>
-                <button type="button" onClick={onImport} className="cursor-pointer rounded-lg border border-edge px-4 py-2">
+                <button
+                  type="button"
+                  onClick={onImport}
+                  className="cursor-pointer rounded-lg border border-edge px-4 py-2"
+                >
                   Import from MediaTracker V1…
                 </button>
               </div>
@@ -160,7 +204,8 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
         {selectMode && (
           <BulkBar
             count={checked.size}
-            genres={allGenres}
+            genres={bulkType ? vocab[bulkType].genres : []}
+            blocked={bulkBlocked}
             onApply={applyBulk}
             onSelectAllVisible={() => setChecked(new Set(visible.map((i) => i.id)))}
             onClear={() => setChecked(new Set())}
@@ -173,9 +218,7 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
         <DetailPanel
           key={selected.id}
           item={selected}
-          genres={allGenres}
-          franchises={franchises}
-          collections={collections}
+          vocabulary={vocab[selected.type]}
           onChange={(updated) => onChange(replaceItem(items, updated))}
           onDelete={() => {
             onChange(removeItem(items, selected.id), `Deleted “${selected.title}”`)

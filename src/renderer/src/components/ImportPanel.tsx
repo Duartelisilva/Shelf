@@ -43,7 +43,8 @@ export function ImportPanel({ onImported, onClose }: Props): React.JSX.Element {
   }
 
   const sagaValues = scan ? Object.entries(scan.sagaCounts).sort((a, b) => b[1] - a[1]) : []
-  const primary = 'cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground disabled:opacity-40'
+  const primary =
+    'cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground disabled:opacity-40'
 
   return (
     <div className="flex-1 overflow-y-auto p-8">

@@ -1,21 +1,60 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bulkGenre, cleanGenre, createItem, distinct, isDuplicate, removeItem, todayISO,
-  withDate, withGenre, withStatus, withoutDate, withoutGenre
+  blankItem,
+  bulkGenre,
+  cleanGenre,
+  startingItem,
+  isDuplicate,
+  removeItem,
+  todayISO,
+  withDate,
+  withGenre,
+  withStatus,
+  withType,
+  withoutDate,
+  withoutGenre
 } from '../src/renderer/src/lib/edit'
 import type { MediaItem } from '../src/shared/types'
 
 const item = (over: Partial<MediaItem> & { id: string }): MediaItem => ({
-  type: 'movie', status: 'finished', title: over.id, genres: [], dates: [], isFavorite: false,
-  createdAt: '2026-01-01T00:00:00.000Z', ...over
+  type: 'movie',
+  status: 'finished',
+  title: over.id,
+  genres: [],
+  dates: [],
+  isFavorite: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  ...over
 })
 
 describe('creating items', () => {
-  it('creates a seen item with an optional date, and a wishlist item without one', () => {
-    const seen = createItem({ type: 'movie', title: '  Heat ', year: 1995, status: 'finished', date: '2020-05-01' }, 'a', 'now')
-    expect(seen).toMatchObject({ title: 'Heat', year: 1995, status: 'finished', dates: ['2020-05-01'] })
-    expect(createItem({ type: 'book', title: 'Dune', year: 1965, status: 'finished' }, 'b', 'now').dates).toEqual([])
-    expect(createItem({ type: 'book', title: 'Dune', year: 1965, status: 'wishlist', date: '2020-01-01' }, 'c', 'now').dates).toEqual([])
+  it('starts as a seen movie dated today, with nothing else filled in', () => {
+    expect(blankItem('a', 'now', '2026-10-25')).toEqual({
+      id: 'a',
+      type: 'movie',
+      status: 'finished',
+      title: '',
+      genres: [],
+      dates: ['2026-10-25'],
+      isFavorite: false,
+      createdAt: 'now'
+    })
+  })
+
+  it('drops fields that belong to another type when the type changes', () => {
+    const series = item({ id: 's', type: 'series', yearEnd: 2020, seasons: 3 })
+    expect(withType(series, 'movie')).toEqual({
+      ...series,
+      type: 'movie',
+      yearEnd: undefined,
+      seasons: undefined
+    })
+    const book = withType(
+      item({ id: 'b', author: 'Herbert', franchise: 'Dune', franchiseOrder: 1 }),
+      'series'
+    )
+    expect(book.author).toBeUndefined()
+    expect(book.franchise).toBeUndefined()
   })
 
   it('spots duplicates by type, title and year, ignoring case and extra spaces', () => {
@@ -74,8 +113,27 @@ describe('lists', () => {
     expect(removeItem(items, 'a').map((i) => i.id)).toEqual(['b'])
     expect(items).toHaveLength(2)
   })
+})
 
-  it('lists distinct sorted values', () => {
-    expect(distinct(['b', undefined, 'a', 'b'])).toEqual(['a', 'b'])
+describe('startingItem', () => {
+  const start = (section: Parameters<typeof startingItem>[0]): MediaItem =>
+    startingItem(section, 'id', 'now', '2026-10-25')
+
+  it('starts a series, a book, a wishlist item or a favorite depending on the tab', () => {
+    expect(start('series').type).toBe('series')
+    expect(start('book').type).toBe('book')
+    expect(start('wishlist')).toMatchObject({ status: 'wishlist', dates: [] })
+    expect(start('favorites').isFavorite).toBe(true)
+  })
+
+  it('starts a seen movie everywhere else', () => {
+    for (const section of ['library', 'movie'] as const) {
+      expect(start(section)).toMatchObject({
+        type: 'movie',
+        status: 'finished',
+        dates: ['2026-10-25'],
+        isFavorite: false
+      })
+    }
   })
 })

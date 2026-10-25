@@ -25,6 +25,11 @@ export function ShelfView(props: Props): React.JSX.Element {
       <div className="flex items-center gap-2.5">
         <span className="h-5 w-1 rounded-sm" style={{ background: accent }} />
         <h2 className="text-lg font-extrabold">{shelf.title}</h2>
+        {shelf.tag && (
+          <span className="rounded-full border border-edge px-2 py-0.5 text-xs text-muted">
+            {shelf.tag}
+          </span>
+        )}
         <span className="text-muted">{count === 1 ? '1 item' : `${count} items`}</span>
         <div className="flex-1" />
         {selectMode && (

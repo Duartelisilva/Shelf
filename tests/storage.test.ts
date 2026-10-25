@@ -55,3 +55,30 @@ describe('storage', () => {
     expect(backups.sort()).toEqual(['library-2026-01-03.json', 'library-2026-01-04.json'])
   })
 })
+
+describe('storage safety', () => {
+  it('keeps the order of many saves made at once, without errors', async () => {
+    const storage = createStorage(dir)
+    const saves = Array.from({ length: 25 }, (_, i) => storage.save(library([`v${i}`])))
+    await Promise.all(saves)
+    expect((await storage.load()).library).toEqual(library(['v24']))
+    expect((await readdir(dir)).filter((n) => n.endsWith('.tmp'))).toEqual([])
+  })
+
+  it('refuses to save something that is not a library, and keeps the old file', async () => {
+    const storage = createStorage(dir)
+    await storage.save(library(['Alien']))
+    await expect(
+      storage.save({ version: 1, items: [{ nonsense: true }] } as never)
+    ).rejects.toThrow('expected shape')
+    await expect(storage.save(null as never)).rejects.toThrow('expected shape')
+    expect((await storage.load()).library).toEqual(library(['Alien']))
+  })
+
+  it('keeps saving after one save was refused', async () => {
+    const storage = createStorage(dir)
+    await expect(storage.save(null as never)).rejects.toThrow()
+    await storage.save(library(['Heat']))
+    expect((await storage.load()).library).toEqual(library(['Heat']))
+  })
+})

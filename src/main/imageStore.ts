@@ -23,12 +23,16 @@ export interface ImageStore {
   pathOf(fileName: string): string | null
 }
 
-export function createImageStore(dir: string, suffix: () => string = () => randomBytes(3).toString('hex')): ImageStore {
+export function createImageStore(
+  dir: string,
+  suffix: () => string = () => randomBytes(3).toString('hex')
+): ImageStore {
   return {
     async importFile(sourcePath, itemId) {
       if (!ITEM_ID.test(itemId)) throw new Error('Invalid item.')
       const extension = extname(sourcePath).slice(1).toLowerCase()
-      if (!IMAGE_EXTENSIONS.includes(extension)) throw new Error('Choose a PNG, JPG, WEBP or GIF image.')
+      if (!IMAGE_EXTENSIONS.includes(extension))
+        throw new Error('Choose a PNG, JPG, WEBP or GIF image.')
       const info = await fs.stat(sourcePath)
       if (info.size > MAX_IMAGE_BYTES) throw new Error('That image is larger than 15 MB.')
       await fs.mkdir(dir, { recursive: true })

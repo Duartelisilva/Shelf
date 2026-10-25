@@ -1,13 +1,14 @@
 import { SORT_LABELS } from '../lib/library'
-import type { GroupBy, SortBy } from '../lib/library'
+import type { GenreFilter, GenreOption, GroupBy, SortBy } from '../lib/library'
+import { MEDIA_TYPES, TYPE_PLURAL } from '../lib/vocab'
 
 interface Props {
   query: string
   onQuery: (value: string) => void
   inputRef: React.Ref<HTMLInputElement>
-  genre: string | null
-  genres: { name: string; count: number }[]
-  onGenre: (value: string | null) => void
+  genre: GenreFilter | null
+  genres: GenreOption[]
+  onGenre: (value: GenreFilter | null) => void
   favoritesOnly: boolean
   onFavoritesOnly: (value: boolean) => void
   groupBy: GroupBy
@@ -23,18 +24,39 @@ interface Props {
 
 const control = 'rounded-lg border border-edge bg-surface px-3 py-2 text-ink'
 
-export function TopBar(props: Props): React.JSX.Element {
-  const { query, genre, favoritesOnly, groupBy, sortBy, view, selectMode } = props
+// The props are unpacked one by one on purpose: inputRef is a React ref, and the
+// lint rule for refs flags any use of a props object that contains one.
+export function TopBar({
+  query,
+  onQuery,
+  inputRef,
+  genre,
+  genres,
+  onGenre,
+  favoritesOnly,
+  onFavoritesOnly,
+  groupBy,
+  onGroupBy,
+  sortBy,
+  onSortBy,
+  view,
+  onView,
+  selectMode,
+  onSelectMode,
+  onAdd
+}: Props): React.JSX.Element {
+  const typesWithGenres = MEDIA_TYPES.filter((t) => genres.some((g) => g.type === t))
+
   return (
     <header className="flex h-[72px] flex-none items-center gap-3 border-b border-line px-7">
       <input
-        ref={props.inputRef}
+        ref={inputRef}
         type="text"
         value={query}
-        onChange={(e) => props.onQuery(e.target.value)}
+        onChange={(e) => onQuery(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
-            props.onQuery('')
+            onQuery('')
             e.currentTarget.blur()
           }
         }}
@@ -44,7 +66,7 @@ export function TopBar(props: Props): React.JSX.Element {
       />
       <button
         type="button"
-        onClick={() => props.onFavoritesOnly(!favoritesOnly)}
+        onClick={() => onFavoritesOnly(!favoritesOnly)}
         aria-pressed={favoritesOnly}
         className={`cursor-pointer rounded-full border px-3.5 py-2 ${
           favoritesOnly
@@ -55,22 +77,42 @@ export function TopBar(props: Props): React.JSX.Element {
         ★ Favorites
       </button>
       <select
-        value={genre ?? ''}
-        onChange={(e) => props.onGenre(e.target.value || null)}
+        value={genre ? `${genre.type}|${genre.name}` : ''}
+        onChange={(e) => {
+          const value: string = e.target.value
+          const cut = value.indexOf('|')
+          onGenre(
+            cut < 0
+              ? null
+              : { type: value.slice(0, cut) as GenreFilter['type'], name: value.slice(cut + 1) }
+          )
+        }}
         aria-label="Filter by genre"
         className={control}
       >
         <option value="">All genres</option>
-        {props.genres.map((g) => (
-          <option key={g.name} value={g.name}>
-            {g.name} ({g.count})
-          </option>
-        ))}
+        {/* With one type on screen the list is flat; with several, genres stay apart by type. */}
+        {typesWithGenres.map((t) => {
+          const options = genres
+            .filter((g) => g.type === t)
+            .map((g) => (
+              <option key={`${g.type}|${g.name}`} value={`${g.type}|${g.name}`}>
+                {g.name} ({g.count})
+              </option>
+            ))
+          return typesWithGenres.length > 1 ? (
+            <optgroup key={t} label={TYPE_PLURAL[t]}>
+              {options}
+            </optgroup>
+          ) : (
+            options
+          )
+        })}
       </select>
       <div className="flex-1" />
       <select
         value={groupBy}
-        onChange={(e) => props.onGroupBy(e.target.value as GroupBy)}
+        onChange={(e) => onGroupBy(e.target.value as GroupBy)}
         aria-label="Group by"
         className={control}
       >
@@ -81,7 +123,7 @@ export function TopBar(props: Props): React.JSX.Element {
       </select>
       <select
         value={sortBy}
-        onChange={(e) => props.onSortBy(e.target.value as SortBy)}
+        onChange={(e) => onSortBy(e.target.value as SortBy)}
         aria-label="Sort by"
         className={control}
       >
@@ -96,7 +138,7 @@ export function TopBar(props: Props): React.JSX.Element {
           <button
             key={mode}
             type="button"
-            onClick={() => props.onView(mode)}
+            onClick={() => onView(mode)}
             aria-pressed={view === mode}
             className={`cursor-pointer px-3 py-2 capitalize ${
               view === mode ? 'bg-accent-soft font-bold text-accent' : 'text-muted'
@@ -108,7 +150,7 @@ export function TopBar(props: Props): React.JSX.Element {
       </div>
       <button
         type="button"
-        onClick={() => props.onSelectMode(!selectMode)}
+        onClick={() => onSelectMode(!selectMode)}
         aria-pressed={selectMode}
         title="Pick several items to set or remove a genre on all of them at once"
         className={`cursor-pointer rounded-lg border px-3 py-2 ${
@@ -119,7 +161,7 @@ export function TopBar(props: Props): React.JSX.Element {
       </button>
       <button
         type="button"
-        onClick={props.onAdd}
+        onClick={onAdd}
         className="cursor-pointer rounded-[10px] bg-accent px-[18px] py-2.5 font-extrabold text-ground"
       >
         + Add

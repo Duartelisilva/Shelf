@@ -11,7 +11,10 @@ interface Props {
   onView: (view: 'import' | 'stats') => void
 }
 
-const GROUPS: Section[][] = [['library', 'movie', 'series', 'book'], ['wishlist', 'favorites']]
+const GROUPS: Section[][] = [
+  ['library', 'movie', 'series', 'book'],
+  ['wishlist', 'favorites']
+]
 const row = 'flex w-full cursor-pointer justify-between rounded-lg px-3 py-2.5 text-left'
 const active = 'bg-accent-soft font-bold text-accent'
 const idle = 'text-muted hover:text-ink'

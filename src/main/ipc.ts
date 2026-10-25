@@ -30,7 +30,9 @@ export function registerIpc(): void {
   })
   ipcMain.handle(CHANNELS.librarySave, (_event, library: Library) => storage.save(library))
 
-  ipcMain.handle(CHANNELS.imagePick, (_event, itemId: string): Promise<ImagePick> => images.pick(itemId))
+  ipcMain.handle(CHANNELS.imagePick, (_event, itemId: string): Promise<ImagePick> =>
+    images.pick(itemId)
+  )
   ipcMain.handle(CHANNELS.imageRemove, (_event, fileName: string) => images.store.remove(fileName))
 
   ipcMain.handle(CHANNELS.importPick, async (): Promise<V1Scan | null> => {

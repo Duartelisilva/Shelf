@@ -3,19 +3,12 @@
 // app just keeps the previous list.
 
 import type { MediaItem, MediaType, Status } from '../../../shared/types'
+import type { Section } from './library'
 
 // Today as yyyy-mm-dd in the computer's own time zone.
 export function todayISO(date: Date = new Date()): string {
   const pad = (n: number): string => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-export interface Draft {
-  type: MediaType
-  title: string
-  year: number
-  status: 'wishlist' | 'finished'
-  date?: string // when it was seen; optional, an old favorite may have no date
 }
 
 const clean = (text: string): string => text.trim().replace(/\s+/g, ' ')
@@ -26,26 +19,61 @@ export function cleanGenre(input: string, known: string[] = []): string {
   return known.find((k) => k.toLowerCase() === text.toLowerCase()) ?? text
 }
 
-export function isDuplicate(items: MediaItem[], draft: Pick<Draft, 'type' | 'title' | 'year'>): boolean {
+export function isDuplicate(
+  items: MediaItem[],
+  candidate: { type: MediaType; title: string; year?: number }
+): boolean {
   const key = (type: string, title: string, year?: number): string =>
     `${type}|${clean(title).toLowerCase()}|${year ?? ''}`
-  const wanted = key(draft.type, draft.title, draft.year)
+  const wanted = key(candidate.type, candidate.title, candidate.year)
   return items.some((i) => key(i.type, i.title, i.year) === wanted)
 }
 
-export function createItem(draft: Draft, id: string, now: string): MediaItem {
-  const item: MediaItem = {
+// What the Add dialog starts with: a movie you have seen, dated today. The date
+// can be removed when it was really long ago, and the status switched to wishlist.
+export function blankItem(id: string, now: string, today: string): MediaItem {
+  return {
     id,
-    type: draft.type,
-    status: draft.status,
-    title: clean(draft.title),
-    year: draft.year,
+    type: 'movie',
+    status: 'finished',
+    title: '',
     genres: [],
-    dates: draft.status === 'finished' && draft.date ? [draft.date] : [],
+    dates: [today],
     isFavorite: false,
     createdAt: now
   }
-  return item
+}
+
+// Adding from the Series tab starts a series, from Books a book, from Wishlist a
+// wishlist item, from Favorites a favorite. Anywhere else it starts as a movie.
+export function startingItem(section: Section, id: string, now: string, today: string): MediaItem {
+  const base = blankItem(id, now, today)
+  switch (section) {
+    case 'series':
+    case 'book':
+      return withType(base, section)
+    case 'wishlist':
+      return { ...base, status: 'wishlist', dates: [] }
+    case 'favorites':
+      return { ...base, isFavorite: true }
+    default:
+      return base
+  }
+}
+
+// Changing the type drops the fields that only make sense for another type.
+export function withType(item: MediaItem, type: MediaType): MediaItem {
+  const next: MediaItem = { ...item, type }
+  if (type !== 'series') {
+    delete next.yearEnd
+    delete next.seasons
+  }
+  if (type === 'series') {
+    delete next.franchise
+    delete next.franchiseOrder
+  }
+  if (type !== 'book') delete next.author
+  return next
 }
 
 export const replaceItem = (items: MediaItem[], updated: MediaItem): MediaItem[] =>
@@ -93,8 +121,4 @@ export function bulkGenre(
     if (!ids.has(item.id)) return item
     return mode === 'add' ? withGenre(item, genre, known) : withoutGenre(item, genre)
   })
-}
-
-export function distinct(values: (string | undefined)[]): string[] {
-  return [...new Set(values.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b))
 }

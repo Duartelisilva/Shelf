@@ -9,7 +9,7 @@
 
 import { constants, promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import type { Library } from '../shared/types'
+import type { Library, MediaItem } from '../shared/types'
 import type { LoadResult } from '../shared/api'
 
 export const FILE_NAME = 'library.json'
@@ -56,12 +56,26 @@ export function createStorage(dir: string, options: StorageOptions = {}): Storag
     }
   }
 
-  async function save(library: Library): Promise<void> {
+  async function write(library: Library): Promise<void> {
     await fs.mkdir(dir, { recursive: true })
     await backupOncePerDay()
     const temporary = `${file}.tmp`
     await fs.writeFile(temporary, JSON.stringify(library, null, 2), 'utf8')
     await fs.rename(temporary, file)
+  }
+
+  // Saves are queued and run one at a time, in the order they were requested.
+  // Two saves overlapping would share the same temporary file and could corrupt it.
+  let queue: Promise<void> = Promise.resolve()
+  function save(library: Library): Promise<void> {
+    if (!isWellFormed(library)) {
+      return Promise.reject(
+        new Error('The library was not saved: it does not have the expected shape.')
+      )
+    }
+    const run = queue.then(() => write(library))
+    queue = run.catch(() => undefined) // a failed save must not block the next ones
+    return run
   }
 
   async function backupOncePerDay(): Promise<void> {
@@ -93,6 +107,28 @@ function isLibrary(value: unknown): value is Library {
   if (!value || typeof value !== 'object') return false
   const library = value as { version?: unknown; items?: unknown }
   return library.version === 1 && Array.isArray(library.items)
+}
+
+const TYPES: string[] = ['movie', 'series', 'book']
+const STATUSES: string[] = ['wishlist', 'in-progress', 'finished']
+
+// A stricter check than isLibrary, used before writing: the window should never
+// be able to replace your library with something that is not one.
+function isWellFormed(value: unknown): value is Library {
+  if (!isLibrary(value)) return false
+  return value.items.every((entry: unknown) => {
+    const item = entry as Partial<MediaItem> | null
+    return (
+      !!item &&
+      typeof item === 'object' &&
+      typeof item.id === 'string' &&
+      typeof item.title === 'string' &&
+      TYPES.includes(item.type as string) &&
+      STATUSES.includes(item.status as string) &&
+      Array.isArray(item.genres) &&
+      Array.isArray(item.dates)
+    )
+  })
 }
 
 function isMissing(error: unknown): boolean {

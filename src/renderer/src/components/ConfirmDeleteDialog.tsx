@@ -7,7 +7,12 @@ interface Props {
 
 // Asks before deleting. Cancel has the focus, so pressing Enter by accident
 // never deletes anything; Esc or a click outside also cancels.
-export function ConfirmDeleteDialog({ title, year, onConfirm, onCancel }: Props): React.JSX.Element {
+export function ConfirmDeleteDialog({
+  title,
+  year,
+  onConfirm,
+  onCancel
+}: Props): React.JSX.Element {
   return (
     <div
       role="alertdialog"
@@ -22,14 +27,23 @@ export function ConfirmDeleteDialog({ title, year, onConfirm, onCancel }: Props)
           Delete “{title}”{year ? ` (${year})` : ''}?
         </h2>
         <p className="text-muted">
-          This removes it from your library, together with its watch history, rating, notes and image.
-          You will be able to undo for a few seconds afterwards.
+          This removes it from your library, together with its watch history, rating, notes and
+          image. You will be able to undo for a few seconds afterwards.
         </p>
         <div className="flex justify-end gap-3">
-          <button type="button" autoFocus onClick={onCancel} className="cursor-pointer rounded-lg border border-edge px-4 py-2">
+          <button
+            type="button"
+            autoFocus
+            onClick={onCancel}
+            className="cursor-pointer rounded-lg border border-edge px-4 py-2"
+          >
             Cancel
           </button>
-          <button type="button" onClick={onConfirm} className="cursor-pointer rounded-lg bg-red-600 px-4 py-2 font-extrabold text-white">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="cursor-pointer rounded-lg bg-red-600 px-4 py-2 font-extrabold text-white"
+          >
             Delete
           </button>
         </div>

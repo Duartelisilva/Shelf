@@ -81,7 +81,17 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
       warnings.push(`wishlist: unknown type for "${text(raw, 'Title') ?? '?'}", skipped`)
       continue
     }
-    const item = convert(raw, type, 'wishlist', now, newId(), 'wishlist', warnings, sagaAs, sagaCounts)
+    const item = convert(
+      raw,
+      type,
+      'wishlist',
+      now,
+      newId(),
+      'wishlist',
+      warnings,
+      sagaAs,
+      sagaCounts
+    )
     if (item) add(item, 'wishlist')
   }
 
@@ -167,7 +177,11 @@ function convert(
   // The item is still imported; the warning tells you what to fix in Shelf.
   for (const problem of itemProblems(item)) warnings.push(`${source}: "${title}": ${problem}`)
   // A collection that just repeats the franchise name adds nothing.
-  if (saga && sagaKind === 'collection' && saga.toLowerCase() !== (item.franchise ?? '').toLowerCase()) {
+  if (
+    saga &&
+    sagaKind === 'collection' &&
+    saga.toLowerCase() !== (item.franchise ?? '').toLowerCase()
+  ) {
     item.collection = saga
   }
   return item

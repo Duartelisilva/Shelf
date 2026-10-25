@@ -6,9 +6,7 @@ import { LibraryScreen } from './components/LibraryScreen'
 import { Sidebar } from './components/Sidebar'
 import type { View } from './components/Sidebar'
 import { StatsScreen } from './components/StatsScreen'
-import { createItem } from './lib/edit'
-import type { Draft } from './lib/edit'
-import { sectionCounts } from './lib/library'
+import { sectionCounts, sectionItems } from './lib/library'
 import type { Section } from './lib/library'
 
 function App(): React.JSX.Element {
@@ -58,7 +56,9 @@ function App(): React.JSX.Element {
   const persist = (next: Library): void => {
     setLibrary(next)
     setSaveError(null)
-    window.api.library.save(next).catch((e) => setSaveError(`Could not save your library: ${String(e)}`))
+    window.api.library
+      .save(next)
+      .catch((e) => setSaveError(`Could not save your library: ${String(e)}`))
   }
 
   const commit = (nextItems: MediaItem[], undoLabel?: string): void => {
@@ -73,12 +73,11 @@ function App(): React.JSX.Element {
     setUndo(null)
   }
 
-  const addItem = (draft: Draft): void => {
-    const item = createItem(draft, globalThis.crypto.randomUUID(), new Date().toISOString())
+  const addItem = (item: MediaItem): void => {
     commit([...items, item])
     setAdding(false)
     setView('library')
-    setSection('library')
+    if (sectionItems([item], section).length === 0) setSection('library')
     setSelectedId(item.id)
   }
 
@@ -118,13 +117,24 @@ function App(): React.JSX.Element {
         {undo && (
           <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-edge bg-panel px-5 py-3 shadow-lg">
             <span>{undo.label}</span>
-            <button type="button" onClick={undoLast} className="cursor-pointer font-extrabold text-accent">
+            <button
+              type="button"
+              onClick={undoLast}
+              className="cursor-pointer font-extrabold text-accent"
+            >
               Undo
             </button>
           </div>
         )}
       </main>
-      {adding && <AddItemDialog items={items} onAdd={addItem} onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddItemDialog
+          items={items}
+          section={section}
+          onAdd={addItem}
+          onClose={() => setAdding(false)}
+        />
+      )}
     </div>
   )
 }

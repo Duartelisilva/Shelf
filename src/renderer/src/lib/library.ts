@@ -4,6 +4,7 @@
 
 import { itemProblems } from '../../../shared/rules'
 import type { MediaItem, MediaType } from '../../../shared/types'
+import { MEDIA_TYPES, TYPE_PLURAL } from './vocab'
 
 export type Section = 'library' | MediaType | 'wishlist' | 'favorites'
 export type GroupBy = 'franchise' | 'genre' | 'collection' | 'none'
@@ -17,10 +18,16 @@ export const SECTION_TITLES: Record<Section, string> = {
   favorites: 'Favorites'
 }
 
+// A genre only means something inside one type: "Fantasy" for books is not "Fantasy" for movies.
+export interface GenreFilter {
+  type: MediaType
+  name: string
+}
+
 export interface Filters {
   section: Section
   query: string
-  genre: string | null
+  genre: GenreFilter | null
   favoritesOnly: boolean
   attentionOnly?: boolean // only items with a missing or invalid year or date
 }
@@ -28,6 +35,7 @@ export interface Filters {
 export interface Shelf {
   id: string
   title: string
+  tag?: string // which type it is, shown only when several types are on screen
   items: MediaItem[]
 }
 
@@ -77,17 +85,33 @@ export function applyFilters(items: MediaItem[], filters: Filters): MediaItem[] 
     (item) =>
       (!filters.favoritesOnly || item.isFavorite) &&
       (!filters.attentionOnly || itemProblems(item).length > 0) &&
-      (!filters.genre || item.genres.includes(filters.genre)) &&
+      (!filters.genre ||
+        (item.type === filters.genre.type && item.genres.includes(filters.genre.name))) &&
       matchesQuery(item, filters.query)
   )
 }
 
-export function genreOptions(items: MediaItem[]): { name: string; count: number }[] {
-  const counts = new Map<string, number>()
-  for (const item of items) for (const genre of item.genres) counts.set(genre, (counts.get(genre) ?? 0) + 1)
-  return [...counts.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+export interface GenreOption extends GenreFilter {
+  count: number
+}
+
+// Every genre with how many items have it, kept apart by type.
+export function genreOptions(items: MediaItem[]): GenreOption[] {
+  const options = new Map<string, GenreOption>()
+  for (const item of items) {
+    for (const name of item.genres) {
+      const key = `${item.type}|${name}`
+      const option = options.get(key) ?? { type: item.type, name, count: 0 }
+      option.count += 1
+      options.set(key, option)
+    }
+  }
+  return [...options.values()].sort(
+    (a, b) =>
+      MEDIA_TYPES.indexOf(a.type) - MEDIA_TYPES.indexOf(b.type) ||
+      b.count - a.count ||
+      a.name.localeCompare(b.name)
+  )
 }
 
 export type SortBy = 'title' | 'added' | 'year' | 'seen' | 'rating'
@@ -126,7 +150,10 @@ export function compareBy(sortBy: SortBy): (a: MediaItem, b: MediaItem) => numbe
 }
 
 // Splits items into shelves. An item with several genres appears on each of
-// its genre shelves (the totals elsewhere still count it once).
+// its genre shelves (the totals elsewhere still count it once). Genres,
+// franchises and collections never mix between types: a "Fantasy" shelf of
+// movies and a "Fantasy" shelf of books are two shelves, tagged with their type
+// when more than one type is on screen.
 // With the default title sort, franchise shelves keep their own numbering. With
 // any other sort, items and shelves are both ordered by it, so the shelf holding
 // the newest (or highest rated...) item comes first.
@@ -147,40 +174,76 @@ export function groupItems(
   } else {
     const keysOf = (item: MediaItem): string[] =>
       groupBy === 'franchise'
-        ? item.franchise ? [item.franchise] : []
+        ? item.franchise
+          ? [item.franchise]
+          : []
         : groupBy === 'collection'
-          ? item.collection ? [item.collection] : []
+          ? item.collection
+            ? [item.collection]
+            : []
           : item.genres
-    const empty = { franchise: 'Standalone', collection: 'No collection', genre: 'No genre' }[groupBy]
+    const empty = { franchise: 'Standalone', collection: 'No collection', genre: 'No genre' }[
+      groupBy
+    ]
     const inShelf = custom ? compare : groupBy === 'franchise' ? byOrder : byTitle
+    const mixed = new Set(rest.map((i) => i.type)).size > 1
+    const tagFor = (type: MediaType): string | undefined => (mixed ? TYPE_PLURAL[type] : undefined)
+    const rank = (type: MediaType): number => MEDIA_TYPES.indexOf(type)
 
-    const groups = new Map<string, MediaItem[]>()
-    const ungrouped: MediaItem[] = []
+    const groups = new Map<string, { type: MediaType; name: string; members: MediaItem[] }>()
+    const loose = new Map<MediaType, MediaItem[]>()
     for (const item of rest) {
       const keys = keysOf(item)
-      if (keys.length === 0) ungrouped.push(item)
-      for (const key of keys) groups.set(key, [...(groups.get(key) ?? []), item])
+      if (keys.length === 0) loose.set(item.type, [...(loose.get(item.type) ?? []), item])
+      for (const name of keys) {
+        const id = `${item.type}|${name}`
+        const group = groups.get(id) ?? { type: item.type, name, members: [] }
+        group.members.push(item)
+        groups.set(id, group)
+      }
     }
-    const named: Shelf[] = [...groups.entries()]
-      .sort(([a, ia], [b, ib]) =>
-        groupBy === 'genre' ? ib.length - ia.length || a.localeCompare(b) : a.localeCompare(b)
+    const named: Shelf[] = [...groups.values()]
+      .sort((a, b) =>
+        groupBy === 'genre'
+          ? b.members.length - a.members.length ||
+            a.name.localeCompare(b.name) ||
+            rank(a.type) - rank(b.type)
+          : a.name.localeCompare(b.name) || rank(a.type) - rank(b.type)
       )
-      .map(([name, members]) => ({ id: `${groupBy}:${name}`, title: name, items: [...members].sort(inShelf) }))
-    const loose: Shelf[] = ungrouped.length
-      ? [{ id: `${groupBy}:none`, title: empty, items: [...ungrouped].sort(custom ? compare : byTitle) }]
-      : []
+      .map((g) => ({
+        id: `${groupBy}:${g.type}:${g.name}`,
+        title: g.name,
+        tag: tagFor(g.type),
+        items: [...g.members].sort(inShelf)
+      }))
+    const looseShelves: Shelf[] = MEDIA_TYPES.filter((t) => loose.has(t)).map((t) => ({
+      id: `${groupBy}:${t}:none`,
+      title: empty,
+      tag: tagFor(t),
+      items: [...(loose.get(t) ?? [])].sort(custom ? compare : byTitle)
+    }))
     shelves = custom
-      ? [...named, ...loose].sort((a, b) => compare(a.items[0], b.items[0]))
-      : [...named, ...loose]
+      ? [...named, ...looseShelves].sort((a, b) => compare(a.items[0], b.items[0]))
+      : [...named, ...looseShelves]
   }
 
-  if (wishlist.length) shelves.push({ id: 'wishlist', title: 'Wishlist', items: [...wishlist].sort(compare) })
+  if (wishlist.length)
+    shelves.push({ id: 'wishlist', title: 'Wishlist', items: [...wishlist].sort(compare) })
   return shelves
 }
 
 // Items without their own color get one from this palette. The color is chosen
 // from the franchise name when there is one, so a franchise looks consistent.
-const PALETTE = ['#234a73', '#7a2e2e', '#1f6554', '#8a5a1c', '#4a5a22', '#5f3a80', '#7a2450', '#3b4a6b']
+const PALETTE = [
+  '#234a73',
+  '#7a2e2e',
+  '#1f6554',
+  '#8a5a1c',
+  '#4a5a22',
+  '#5f3a80',
+  '#7a2450',
+  '#3b4a6b'
+]
 
 export function posterColor(item: MediaItem): string {
   if (item.color) return item.color
@@ -209,7 +272,8 @@ export function formatDate(iso: string): string {
 }
 
 // Card images are served by the app itself (see src/main/images.ts).
-export const imageUrl = (fileName: string): string => `shelf-image://img/${encodeURIComponent(fileName)}`
+export const imageUrl = (fileName: string): string =>
+  `shelf-image://img/${encodeURIComponent(fileName)}`
 
 // When the item was added, as dd/mm/yyyy in the computer's own time zone.
 export function addedDate(item: MediaItem): string {
