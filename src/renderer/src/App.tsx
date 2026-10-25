@@ -4,6 +4,8 @@ import { AddItemDialog } from './components/AddItemDialog'
 import { ImportPanel } from './components/ImportPanel'
 import { LibraryScreen } from './components/LibraryScreen'
 import { Sidebar } from './components/Sidebar'
+import type { View } from './components/Sidebar'
+import { StatsScreen } from './components/StatsScreen'
 import { createItem } from './lib/edit'
 import type { Draft } from './lib/edit'
 import { sectionCounts } from './lib/library'
@@ -15,7 +17,7 @@ function App(): React.JSX.Element {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [section, setSection] = useState<Section>('library')
-  const [importing, setImporting] = useState(false)
+  const [view, setView] = useState<View>('library')
   const [adding, setAdding] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // The list as it was before the last undoable change (delete, bulk genre).
@@ -75,7 +77,7 @@ function App(): React.JSX.Element {
     const item = createItem(draft, globalThis.crypto.randomUUID(), new Date().toISOString())
     commit([...items, item])
     setAdding(false)
-    setImporting(false)
+    setView('library')
     setSection('library')
     setSelectedId(item.id)
   }
@@ -86,20 +88,22 @@ function App(): React.JSX.Element {
   return (
     <div className="flex h-full">
       <Sidebar
+        view={view}
         section={section}
         counts={counts}
-        importing={importing}
         onSection={(s) => {
           setSection(s)
-          setImporting(false)
+          setView('library')
         }}
-        onImport={() => setImporting(true)}
+        onView={setView}
       />
       <main className="relative flex min-w-0 flex-1 flex-col">
         {notice && <p className="bg-amber-900/40 px-7 py-2 text-amber-200">{notice}</p>}
         {saveError && <p className="bg-red-900/40 px-7 py-2 text-red-200">{saveError}</p>}
-        {importing ? (
-          <ImportPanel onImported={setLibrary} onClose={() => setImporting(false)} />
+        {view === 'import' ? (
+          <ImportPanel onImported={setLibrary} onClose={() => setView('library')} />
+        ) : view === 'stats' ? (
+          <StatsScreen items={items} />
         ) : (
           <LibraryScreen
             items={items}
@@ -108,7 +112,7 @@ function App(): React.JSX.Element {
             onSelect={setSelectedId}
             onChange={commit}
             onAdd={() => setAdding(true)}
-            onImport={() => setImporting(true)}
+            onImport={() => setView('import')}
           />
         )}
         {undo && (

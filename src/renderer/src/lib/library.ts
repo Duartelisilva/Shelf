@@ -90,6 +90,16 @@ export function genreOptions(items: MediaItem[]): { name: string; count: number 
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 }
 
+export type SortBy = 'title' | 'added' | 'year' | 'seen' | 'rating'
+
+export const SORT_LABELS: Record<SortBy, string> = {
+  title: 'Title (A–Z)',
+  added: 'Recently added',
+  year: 'Year (newest)',
+  seen: 'Last seen',
+  rating: 'Rating (highest)'
+}
+
 const byTitle = (a: MediaItem, b: MediaItem): number => a.title.localeCompare(b.title)
 
 // Order inside a franchise: its own numbering first, then release year.
@@ -98,19 +108,42 @@ const byOrder = (a: MediaItem, b: MediaItem): number =>
   (a.year ?? 0) - (b.year ?? 0) ||
   byTitle(a, b)
 
+// "Best first" for each sort. Ties fall back to the title, and items missing
+// the value (no date, no rating) go last.
+export function compareBy(sortBy: SortBy): (a: MediaItem, b: MediaItem) => number {
+  switch (sortBy) {
+    case 'added':
+      return (a, b) => b.createdAt.localeCompare(a.createdAt) || byTitle(a, b)
+    case 'year':
+      return (a, b) => (b.year ?? 0) - (a.year ?? 0) || byTitle(a, b)
+    case 'seen':
+      return (a, b) => (lastDate(b) ?? '').localeCompare(lastDate(a) ?? '') || byTitle(a, b)
+    case 'rating':
+      return (a, b) => (b.rating ?? -1) - (a.rating ?? -1) || byTitle(a, b)
+    default:
+      return byTitle
+  }
+}
+
 // Splits items into shelves. An item with several genres appears on each of
 // its genre shelves (the totals elsewhere still count it once).
+// With the default title sort, franchise shelves keep their own numbering. With
+// any other sort, items and shelves are both ordered by it, so the shelf holding
+// the newest (or highest rated...) item comes first.
 export function groupItems(
   items: MediaItem[],
   groupBy: GroupBy,
-  options: { wishlistShelf: boolean }
+  options: { wishlistShelf: boolean; sortBy?: SortBy }
 ): Shelf[] {
+  const sortBy = options.sortBy ?? 'title'
+  const custom = sortBy !== 'title'
+  const compare = compareBy(sortBy)
   const wishlist = options.wishlistShelf ? items.filter((i) => i.status === 'wishlist') : []
   const rest = options.wishlistShelf ? items.filter((i) => i.status !== 'wishlist') : items
-  const shelves: Shelf[] = []
+  let shelves: Shelf[] = []
 
   if (groupBy === 'none') {
-    if (rest.length) shelves.push({ id: 'all', title: 'All', items: [...rest].sort(byTitle) })
+    if (rest.length) shelves.push({ id: 'all', title: 'All', items: [...rest].sort(compare) })
   } else {
     const keysOf = (item: MediaItem): string[] =>
       groupBy === 'franchise'
@@ -119,6 +152,7 @@ export function groupItems(
           ? item.collection ? [item.collection] : []
           : item.genres
     const empty = { franchise: 'Standalone', collection: 'No collection', genre: 'No genre' }[groupBy]
+    const inShelf = custom ? compare : groupBy === 'franchise' ? byOrder : byTitle
 
     const groups = new Map<string, MediaItem[]>()
     const ungrouped: MediaItem[] = []
@@ -127,22 +161,20 @@ export function groupItems(
       if (keys.length === 0) ungrouped.push(item)
       for (const key of keys) groups.set(key, [...(groups.get(key) ?? []), item])
     }
-    const ordered = [...groups.entries()].sort(([a, ia], [b, ib]) =>
-      groupBy === 'genre' ? ib.length - ia.length || a.localeCompare(b) : a.localeCompare(b)
-    )
-    for (const [name, members] of ordered) {
-      shelves.push({
-        id: `${groupBy}:${name}`,
-        title: name,
-        items: [...members].sort(groupBy === 'franchise' ? byOrder : byTitle)
-      })
-    }
-    if (ungrouped.length) {
-      shelves.push({ id: `${groupBy}:none`, title: empty, items: ungrouped.sort(byTitle) })
-    }
+    const named: Shelf[] = [...groups.entries()]
+      .sort(([a, ia], [b, ib]) =>
+        groupBy === 'genre' ? ib.length - ia.length || a.localeCompare(b) : a.localeCompare(b)
+      )
+      .map(([name, members]) => ({ id: `${groupBy}:${name}`, title: name, items: [...members].sort(inShelf) }))
+    const loose: Shelf[] = ungrouped.length
+      ? [{ id: `${groupBy}:none`, title: empty, items: [...ungrouped].sort(custom ? compare : byTitle) }]
+      : []
+    shelves = custom
+      ? [...named, ...loose].sort((a, b) => compare(a.items[0], b.items[0]))
+      : [...named, ...loose]
   }
 
-  if (wishlist.length) shelves.push({ id: 'wishlist', title: 'Wishlist', items: wishlist.sort(byTitle) })
+  if (wishlist.length) shelves.push({ id: 'wishlist', title: 'Wishlist', items: [...wishlist].sort(compare) })
   return shelves
 }
 
@@ -178,3 +210,10 @@ export function formatDate(iso: string): string {
 
 // Card images are served by the app itself (see src/main/images.ts).
 export const imageUrl = (fileName: string): string => `shelf-image://img/${encodeURIComponent(fileName)}`
+
+// When the item was added, as dd/mm/yyyy in the computer's own time zone.
+export function addedDate(item: MediaItem): string {
+  const d = new Date(item.createdAt)
+  const pad = (n: number): string => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+}

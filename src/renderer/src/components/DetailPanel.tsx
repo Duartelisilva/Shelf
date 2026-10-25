@@ -11,7 +11,8 @@ import {
   withoutGenre,
   withStatus
 } from '../lib/edit'
-import { formatDate, imageUrl, posterColor, readableOn } from '../lib/library'
+import { addedDate, formatDate, imageUrl, posterColor, readableOn } from '../lib/library'
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog'
 
 interface Props {
   item: MediaItem
@@ -226,7 +227,9 @@ export function DetailPanel({ item, genres, franchises, collections, onChange, o
           )}
         </div>
         <div className="flex flex-col justify-center gap-2">
-          <span className="text-muted capitalize">{item.type}</span>
+          <span className="text-muted">
+            <span className="capitalize">{item.type}</span> · added {addedDate(item)}
+          </span>
           <button
             type="button"
             onClick={() => set({ isFavorite: !item.isFavorite })}
@@ -406,22 +409,18 @@ export function DetailPanel({ item, genres, franchises, collections, onChange, o
       <NotesField key={key('notes', item.notes)} value={item.notes ?? ''} onCommit={(v) => set({ notes: text(v) })} />
 
       <div className="mt-2 border-t border-line pt-4">
-        {confirmDelete ? (
-          <div className="flex items-center gap-3">
-            <span className="text-red-300">Delete this item?</span>
-            <button type="button" onClick={onDelete} className="cursor-pointer font-bold text-red-300">
-              Yes, delete
-            </button>
-            <button type="button" onClick={() => setConfirmDelete(false)} className="cursor-pointer text-muted">
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} className="cursor-pointer text-red-300">
-            Delete…
-          </button>
-        )}
+        <button type="button" onClick={() => setConfirmDelete(true)} className="cursor-pointer text-red-300">
+          Delete…
+        </button>
       </div>
+      {confirmDelete && (
+        <ConfirmDeleteDialog
+          title={item.title}
+          year={item.year}
+          onConfirm={onDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </aside>
   )
 }

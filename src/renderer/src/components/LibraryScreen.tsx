@@ -3,7 +3,7 @@ import { itemProblems } from '../../../shared/rules'
 import type { MediaItem } from '../../../shared/types'
 import { bulkGenre, cleanGenre, distinct, removeItem, replaceItem } from '../lib/edit'
 import { SECTION_TITLES, applyFilters, genreOptions, groupItems } from '../lib/library'
-import type { GroupBy, Section } from '../lib/library'
+import type { GroupBy, Section, SortBy } from '../lib/library'
 import { BulkBar } from './BulkBar'
 import { DetailPanel } from './DetailPanel'
 import { ShelfView } from './ShelfView'
@@ -24,6 +24,7 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
   const [genre, setGenre] = useState<string | null>(null)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const [groupBy, setGroupBy] = useState<GroupBy>('franchise')
+  const [sortBy, setSortBy] = useState<SortBy>('title')
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [attentionOnly, setAttentionOnly] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
@@ -60,8 +61,8 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
     [items, section, query, activeGenre, favoritesOnly, showAttention]
   )
   const shelves = useMemo(
-    () => groupItems(visible, groupBy, { wishlistShelf: section === 'library' }),
-    [visible, groupBy, section]
+    () => groupItems(visible, groupBy, { wishlistShelf: section === 'library', sortBy }),
+    [visible, groupBy, section, sortBy]
   )
   const selected = items.find((i) => i.id === selectedId) ?? null
 
@@ -97,6 +98,8 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
           onFavoritesOnly={setFavoritesOnly}
           groupBy={groupBy}
           onGroupBy={setGroupBy}
+          sortBy={sortBy}
+          onSortBy={setSortBy}
           view={view}
           onView={setView}
           selectMode={selectMode}
@@ -147,6 +150,7 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
                 selectedId={selectedId}
                 selectMode={selectMode}
                 checkedIds={checked}
+                showAdded={sortBy === 'added'}
                 onPick={pick}
                 onSelectShelf={(ids) => setChecked(new Set([...checked, ...ids]))}
               />

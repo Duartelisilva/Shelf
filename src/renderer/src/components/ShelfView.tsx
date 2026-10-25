@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Shelf } from '../lib/library'
-import { formatDate, lastDate, posterColor } from '../lib/library'
+import { addedDate, formatDate, lastDate, posterColor } from '../lib/library'
 import { PosterCard } from './PosterCard'
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   selectedId: string | null
   selectMode: boolean
   checkedIds: ReadonlySet<string>
+  showAdded: boolean
   onPick: (id: string) => void
   onSelectShelf: (ids: string[]) => void
 }
@@ -53,6 +54,7 @@ export function ShelfView(props: Props): React.JSX.Element {
               selected={item.id === selectedId}
               selectMode={selectMode}
               checked={checkedIds.has(item.id)}
+              showAdded={props.showAdded}
               onPick={onPick}
             />
           ))}
@@ -69,7 +71,7 @@ export function ShelfView(props: Props): React.JSX.Element {
                 key={item.id}
                 type="button"
                 onClick={() => onPick(item.id)}
-                className={`grid cursor-pointer grid-cols-[24px_1fr_80px_60px_1fr_100px] gap-4 border-t border-line px-3 py-2 text-left hover:bg-surface ${
+                className={`grid cursor-pointer grid-cols-[24px_1fr_80px_60px_1fr_100px_100px] gap-4 border-t border-line px-3 py-2 text-left hover:bg-surface ${
                   on ? 'bg-accent-soft' : ''
                 }`}
               >
@@ -79,6 +81,7 @@ export function ShelfView(props: Props): React.JSX.Element {
                 <span className="text-muted">{item.year ?? ''}</span>
                 <span className="text-muted">{item.genres.join(', ')}</span>
                 <span className="text-muted">{seen ? formatDate(seen) : ''}</span>
+                <span className="text-muted">{addedDate(item)}</span>
               </button>
             )
           })}

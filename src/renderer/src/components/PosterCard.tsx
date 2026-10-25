@@ -1,5 +1,5 @@
 import type { MediaItem } from '../../../shared/types'
-import { formatDate, imageUrl, lastDate, posterColor, readableOn } from '../lib/library'
+import { addedDate, formatDate, imageUrl, lastDate, posterColor, readableOn } from '../lib/library'
 
 const TYPE_LABEL = { movie: 'Movie', series: 'Series', book: 'Book' } as const
 
@@ -8,17 +8,18 @@ interface Props {
   selected: boolean
   selectMode: boolean
   checked: boolean
+  showAdded: boolean
   onPick: (id: string) => void
 }
 
 // The card shows the item's image when it has one. Without an image it is a
 // colored block with the franchise number, or the first letter.
-export function PosterCard({ item, selected, selectMode, checked, onPick }: Props): React.JSX.Element {
+export function PosterCard({ item, selected, selectMode, checked, showAdded, onPick }: Props): React.JSX.Element {
   const wishlist = item.status === 'wishlist'
   const fill = posterColor(item)
   const ink = wishlist && !item.image ? '#a3acba' : readableOn(fill)
   const seen = lastDate(item)
-  const meta = [item.year, wishlist ? 'wishlist' : seen ? `seen ${formatDate(seen)}` : null]
+  const meta = [item.year, showAdded ? `added ${addedDate(item)}` : wishlist ? 'wishlist' : seen ? `seen ${formatDate(seen)}` : null]
     .filter(Boolean)
     .join(' · ')
 

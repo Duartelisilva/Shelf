@@ -1,4 +1,5 @@
-import type { GroupBy } from '../lib/library'
+import { SORT_LABELS } from '../lib/library'
+import type { GroupBy, SortBy } from '../lib/library'
 
 interface Props {
   query: string
@@ -11,6 +12,8 @@ interface Props {
   onFavoritesOnly: (value: boolean) => void
   groupBy: GroupBy
   onGroupBy: (value: GroupBy) => void
+  sortBy: SortBy
+  onSortBy: (value: SortBy) => void
   view: 'grid' | 'list'
   onView: (value: 'grid' | 'list') => void
   selectMode: boolean
@@ -21,7 +24,7 @@ interface Props {
 const control = 'rounded-lg border border-edge bg-surface px-3 py-2 text-ink'
 
 export function TopBar(props: Props): React.JSX.Element {
-  const { query, genre, favoritesOnly, groupBy, view, selectMode } = props
+  const { query, genre, favoritesOnly, groupBy, sortBy, view, selectMode } = props
   return (
     <header className="flex h-[72px] flex-none items-center gap-3 border-b border-line px-7">
       <input
@@ -75,6 +78,18 @@ export function TopBar(props: Props): React.JSX.Element {
         <option value="genre">Group: Genre</option>
         <option value="collection">Group: Collection</option>
         <option value="none">Group: None</option>
+      </select>
+      <select
+        value={sortBy}
+        onChange={(e) => props.onSortBy(e.target.value as SortBy)}
+        aria-label="Sort by"
+        className={control}
+      >
+        {(Object.keys(SORT_LABELS) as SortBy[]).map((key) => (
+          <option key={key} value={key}>
+            Sort: {SORT_LABELS[key]}
+          </option>
+        ))}
       </select>
       <div className="flex overflow-hidden rounded-lg border border-edge">
         {(['grid', 'list'] as const).map((mode) => (
