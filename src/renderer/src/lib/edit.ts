@@ -32,16 +32,7 @@ export function isDuplicate(
 // What the Add dialog starts with: a movie you have seen, dated today. The date
 // can be removed when it was really long ago, and the status switched to wishlist.
 export function blankItem(id: string, now: string, today: string): MediaItem {
-  return {
-    id,
-    type: 'movie',
-    status: 'finished',
-    title: '',
-    genres: [],
-    dates: [today],
-    isFavorite: false,
-    createdAt: now
-  }
+  return { id, type: 'movie', status: 'finished', title: '', genres: [], dates: [today], isFavorite: false, createdAt: now }
 }
 
 // Adding from the Series tab starts a series, from Books a book, from Wishlist a
@@ -54,6 +45,8 @@ export function startingItem(section: Section, id: string, now: string, today: s
       return withType(base, section)
     case 'wishlist':
       return { ...base, status: 'wishlist', dates: [] }
+    case 'in-progress':
+      return { ...base, status: 'in-progress', dates: [] }
     case 'favorites':
       return { ...base, isFavorite: true }
     default:
@@ -87,7 +80,35 @@ export const removeItem = (items: MediaItem[], id: string): MediaItem[] =>
 export function withStatus(item: MediaItem, status: Status, today: string): MediaItem {
   const becameFinished = status === 'finished' && item.status !== 'finished'
   const dates = becameFinished && item.dates.length === 0 ? [today] : item.dates
-  return { ...item, status, dates }
+  const next: MediaItem = { ...item, status, dates }
+  if (status !== 'in-progress') delete next.progress // progress only means something while watching
+  return next
+}
+
+// Starting or moving a series' progress. A wishlist series that gets a progress
+// is, of course, being watched now.
+export function withProgress(item: MediaItem, season: number, episode: number): MediaItem {
+  return {
+    ...item,
+    status: item.status === 'wishlist' ? 'in-progress' : item.status,
+    progress: { season, episode }
+  }
+}
+
+export const startWatching = (item: MediaItem): MediaItem => withProgress(item, 1, 1)
+
+export function nextEpisode(item: MediaItem): MediaItem {
+  const p = item.progress
+  return p ? withProgress(item, p.season, p.episode + 1) : startWatching(item)
+}
+
+// First episode of the next season; stays put on the last season when the
+// number of seasons is known.
+export function nextSeason(item: MediaItem): MediaItem {
+  const p = item.progress
+  if (!p) return startWatching(item)
+  if (item.seasons !== undefined && p.season >= item.seasons) return item
+  return withProgress(item, p.season + 1, 1)
 }
 
 export const withDate = (item: MediaItem, iso: string): MediaItem =>

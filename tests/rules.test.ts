@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { itemProblems, parseDate, parsePositiveInt, parseYear } from '../src/shared/rules'
+import { itemProblems, parseDate, parsePositiveInt, parseSeasonNumber, parseYear } from '../src/shared/rules'
 
 const today = new Date(2026, 9, 24) // 24 October 2026
 
@@ -65,5 +65,23 @@ describe('itemProblems', () => {
     expect(itemProblems({ year: 2010, yearEnd: 2005, dates: [] })).toHaveLength(1)
     expect(itemProblems({ year: 2010, dates: ['2024-02-31'] }, today)).toHaveLength(1)
     expect(itemProblems({ year: 2010, dates: ['2027-01-01'] }, today)).toHaveLength(1)
+  })
+})
+
+describe('series progress', () => {
+  it('accepts a season within the number of seasons, when that is known', () => {
+    expect(parseSeasonNumber('2', 3)).toEqual({ ok: true, value: 2 })
+    expect(parseSeasonNumber('4', 3).ok).toBe(false)
+    expect(parseSeasonNumber('4').ok).toBe(true)
+    expect(parseSeasonNumber('0', 3).ok).toBe(false)
+  })
+
+  it('flags progress that is invalid or beyond the number of seasons', () => {
+    const base = { year: 2020, dates: [] as string[] }
+    expect(itemProblems({ ...base, seasons: 3, progress: { season: 2, episode: 5 } }, today)).toEqual([])
+    expect(itemProblems({ ...base, progress: { season: 9, episode: 1 } }, today)).toEqual([])
+    expect(itemProblems({ ...base, seasons: 3, progress: { season: 4, episode: 1 } }, today)).toHaveLength(1)
+    expect(itemProblems({ ...base, progress: { season: 0, episode: 1 } }, today)).toHaveLength(1)
+    expect(itemProblems({ ...base, progress: { season: 1, episode: 1.5 } }, today)).toHaveLength(1)
   })
 })

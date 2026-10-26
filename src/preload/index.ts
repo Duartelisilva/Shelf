@@ -13,6 +13,20 @@ const api: ShelfApi = {
     pick: (itemId) => ipcRenderer.invoke(CHANNELS.imagePick, itemId),
     remove: (fileName) => ipcRenderer.invoke(CHANNELS.imageRemove, fileName)
   },
+  data: {
+    exportLibrary: () => ipcRenderer.invoke(CHANNELS.dataExport),
+    pickImport: () => ipcRenderer.invoke(CHANNELS.dataPickImport),
+    commitImport: (mode) => ipcRenderer.invoke(CHANNELS.dataCommitImport, mode),
+    listBackups: () => ipcRenderer.invoke(CHANNELS.dataListBackups),
+    restoreBackup: (name) => ipcRenderer.invoke(CHANNELS.dataRestoreBackup, name),
+    openDataFolder: () => ipcRenderer.invoke(CHANNELS.dataOpenFolder)
+  },
+  settings: {
+    status: () => ipcRenderer.invoke(CHANNELS.settingsStatus),
+    saveTmdbKey: (key) => ipcRenderer.invoke(CHANNELS.settingsSaveTmdbKey, key),
+    clearTmdbKey: () => ipcRenderer.invoke(CHANNELS.settingsClearTmdbKey),
+    testTmdbKey: () => ipcRenderer.invoke(CHANNELS.settingsTestTmdbKey)
+  },
   importV1: {
     pickFolder: () => ipcRenderer.invoke(CHANNELS.importPick),
     commit: (sagaAs) => ipcRenderer.invoke(CHANNELS.importCommit, sagaAs)

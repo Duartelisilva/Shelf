@@ -1,20 +1,17 @@
 import type { Section } from '../lib/library'
 import { SECTION_TITLES } from '../lib/library'
 
-export type View = 'library' | 'import' | 'stats'
+export type View = 'library' | 'settings' | 'stats'
 
 interface Props {
   view: View
   section: Section
   counts: Record<Section, number>
   onSection: (section: Section) => void
-  onView: (view: 'import' | 'stats') => void
+  onView: (view: 'settings' | 'stats') => void
 }
 
-const GROUPS: Section[][] = [
-  ['library', 'movie', 'series', 'book'],
-  ['wishlist', 'favorites']
-]
+const GROUPS: Section[][] = [['library', 'movie', 'series', 'book'], ['in-progress', 'wishlist', 'favorites']]
 const row = 'flex w-full cursor-pointer justify-between rounded-lg px-3 py-2.5 text-left'
 const active = 'bg-accent-soft font-bold text-accent'
 const idle = 'text-muted hover:text-ink'
@@ -54,12 +51,13 @@ export function Sidebar({ view, section, counts, onSection, onView }: Props): Re
       <div className="flex-1" />
       <button
         type="button"
-        onClick={() => onView('import')}
+        onClick={() => onView('settings')}
+        aria-current={view === 'settings' ? 'page' : undefined}
         className={`cursor-pointer rounded-lg border px-3 py-2.5 text-left ${
-          view === 'import' ? 'border-accent text-accent' : 'border-edge text-muted hover:text-ink'
+          view === 'settings' ? 'border-accent text-accent' : 'border-edge text-muted hover:text-ink'
         }`}
       >
-        Import from V1…
+        Settings
       </button>
     </nav>
   )

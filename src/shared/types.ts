@@ -33,6 +33,7 @@ export interface MediaItem {
   // Type-specific (only meaningful for that type)
   yearEnd?: number // series
   seasons?: number // series
+  progress?: { season: number; episode: number } // series being watched: the last episode seen
   author?: string // book
 
   createdAt: string // ISO timestamp

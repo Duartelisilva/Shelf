@@ -17,13 +17,7 @@ const movies = [
     Franchise: 'The Lord of the Rings',
     FranchiseNumber: 2
   },
-  {
-    Title: 'Scream',
-    Year: 1996,
-    Saga: 'Horror',
-    BaseColor: { A: 0, R: 0, G: 0, B: 0 },
-    WatchDates: []
-  }
+  { Title: 'Scream', Year: 1996, Saga: 'Horror', BaseColor: { A: 0, R: 0, G: 0, B: 0 }, WatchDates: [] }
 ]
 
 describe('importV1', () => {
@@ -56,18 +50,8 @@ describe('importV1', () => {
   it('maps series, books and wishlist items', () => {
     const { items } = importV1(
       {
-        series: [
-          {
-            Title: 'Dark',
-            Year: 2017,
-            YearEnd: 2020,
-            NumberOfSeasons: 3,
-            WatchDates: ['2022-05-01T00:00:00']
-          }
-        ],
-        books: [
-          { Title: 'Dune', Year: 1965, Author: 'Frank Herbert', BookNumber: 1, WatchDates: [] }
-        ],
+        series: [{ Title: 'Dark', Year: 2017, YearEnd: 2020, NumberOfSeasons: 3, WatchDates: ['2022-05-01T00:00:00'] }],
+        books: [{ Title: 'Dune', Year: 1965, Author: 'Frank Herbert', BookNumber: 1, WatchDates: [] }],
         wishlist: [
           { Title: 'Hyperion', Type: 2, Author: 'Dan Simmons' },
           { Title: 'Shogun', Type: 1, SeasonNumber: 1 },
@@ -76,30 +60,11 @@ describe('importV1', () => {
       },
       opts
     )
-    expect(items.find((i) => i.title === 'Dark')).toMatchObject({
-      type: 'series',
-      yearEnd: 2020,
-      seasons: 3,
-      status: 'finished'
-    })
-    expect(items.find((i) => i.title === 'Dune')).toMatchObject({
-      type: 'book',
-      author: 'Frank Herbert',
-      franchiseOrder: 1
-    })
-    expect(items.find((i) => i.title === 'Hyperion')).toMatchObject({
-      type: 'book',
-      status: 'wishlist'
-    })
-    expect(items.find((i) => i.title === 'Shogun')).toMatchObject({
-      type: 'series',
-      seasons: 1,
-      status: 'wishlist'
-    })
-    expect(items.find((i) => i.title === 'Dune: Part Two')).toMatchObject({
-      type: 'movie',
-      franchise: 'Dune'
-    })
+    expect(items.find((i) => i.title === 'Dark')).toMatchObject({ type: 'series', yearEnd: 2020, seasons: 3, status: 'finished' })
+    expect(items.find((i) => i.title === 'Dune')).toMatchObject({ type: 'book', author: 'Frank Herbert', franchiseOrder: 1 })
+    expect(items.find((i) => i.title === 'Hyperion')).toMatchObject({ type: 'book', status: 'wishlist' })
+    expect(items.find((i) => i.title === 'Shogun')).toMatchObject({ type: 'series', seasons: 1, status: 'wishlist' })
+    expect(items.find((i) => i.title === 'Dune: Part Two')).toMatchObject({ type: 'movie', franchise: 'Dune' })
   })
 
   it('skips duplicates and untitled entries with a warning', () => {
@@ -118,22 +83,12 @@ describe('Saga mapping', () => {
   const sample = [
     { Title: 'Iron Man', Year: 2008, Saga: 'Marvel', Franchise: 'Iron Man', WatchDates: [] },
     { Title: 'Avengers', Year: 2012, Saga: 'Marvel', Franchise: 'Avengers', WatchDates: [] },
-    {
-      Title: 'Resident Evil',
-      Year: 2002,
-      Saga: 'Resident Evil',
-      Franchise: 'Resident Evil',
-      WatchDates: []
-    },
+    { Title: 'Resident Evil', Year: 2002, Saga: 'Resident Evil', Franchise: 'Resident Evil', WatchDates: [] },
     { Title: 'Alien', Year: 1979, Saga: 'Horror', Franchise: 'Alien', WatchDates: [] }
   ]
 
   it('counts every Saga value for the preview', () => {
-    expect(importV1({ movies: sample }, opts).sagaCounts).toEqual({
-      Marvel: 2,
-      'Resident Evil': 1,
-      Horror: 1
-    })
+    expect(importV1({ movies: sample }, opts).sagaCounts).toEqual({ Marvel: 2, 'Resident Evil': 1, Horror: 1 })
   })
 
   it('treats unmapped values as genres', () => {
@@ -165,17 +120,20 @@ describe('mergeIntoLibrary', () => {
 describe('year and date checks', () => {
   it('imports items with a missing or out-of-range year but warns about them', () => {
     const { items, warnings } = importV1(
-      {
-        movies: [
-          { Title: 'No Year', WatchDates: [] },
-          { Title: 'Too Old', Year: 1850, WatchDates: [] },
-          { Title: 'Fine', Year: 1999, WatchDates: [] }
-        ]
-      },
+      { movies: [{ Title: 'No Year', WatchDates: [] }, { Title: 'Too Old', Year: 1850, WatchDates: [] }, { Title: 'Fine', Year: 1999, WatchDates: [] }] },
       opts
     )
     expect(items).toHaveLength(3)
     expect(warnings).toHaveLength(2)
     expect(warnings[0]).toContain('No Year')
+  })
+})
+
+describe('mergeIntoLibrary by id', () => {
+  it('skips an item whose id is already in the library, even if it was renamed', () => {
+    const first = importV1({ movies: [{ Title: 'Alien', Year: 1979, WatchDates: [] }] }, opts).items
+    const library = { version: 1 as const, items: first }
+    const renamed = [{ ...first[0], title: 'Alien (Director\'s Cut)' }]
+    expect(mergeIntoLibrary(library, renamed)).toMatchObject({ added: 0, skipped: 1 })
   })
 })

@@ -13,6 +13,7 @@ import type { Library, MediaItem } from '../shared/types'
 import type { LoadResult } from '../shared/api'
 
 export const FILE_NAME = 'library.json'
+export const BACKUPS_DIR = 'backups'
 
 export function emptyLibrary(): Library {
   return { version: 1, items: [] }
@@ -26,13 +27,18 @@ export interface StorageOptions {
 export interface Storage {
   load(): Promise<LoadResult>
   save(library: Library): Promise<void>
+  // Resolves when every save requested so far has been written.
+  flush(): Promise<void>
+  // Keeps a copy of the current library before something replaces it
+  // (the newest 5 per reason are kept). Returns the copy's file name.
+  snapshot(reason: 'restore' | 'import'): Promise<string | null>
 }
 
 export function createStorage(dir: string, options: StorageOptions = {}): Storage {
   const keepBackups = options.keepBackups ?? 14
   const now = options.now ?? ((): Date => new Date())
   const file = join(dir, FILE_NAME)
-  const backupDir = join(dir, 'backups')
+  const backupDir = join(dir, BACKUPS_DIR)
 
   async function load(): Promise<LoadResult> {
     let raw: string
@@ -69,9 +75,7 @@ export function createStorage(dir: string, options: StorageOptions = {}): Storag
   let queue: Promise<void> = Promise.resolve()
   function save(library: Library): Promise<void> {
     if (!isWellFormed(library)) {
-      return Promise.reject(
-        new Error('The library was not saved: it does not have the expected shape.')
-      )
+      return Promise.reject(new Error('The library was not saved: it does not have the expected shape.'))
     }
     const run = queue.then(() => write(library))
     queue = run.catch(() => undefined) // a failed save must not block the next ones
@@ -100,7 +104,26 @@ export function createStorage(dir: string, options: StorageOptions = {}): Storag
     }
   }
 
-  return { load, save }
+  async function snapshot(reason: 'restore' | 'import'): Promise<string | null> {
+    await queue
+    try {
+      await fs.access(file)
+    } catch {
+      return null // no library file yet, nothing to keep
+    }
+    await fs.mkdir(backupDir, { recursive: true })
+    const name = `before-${reason}-${now().toISOString().replace(/[:.]/g, '-')}.json`
+    await fs.copyFile(file, join(backupDir, name))
+    const mine = (await fs.readdir(backupDir))
+      .filter((n) => n.startsWith(`before-${reason}-`) && n.endsWith('.json'))
+      .sort()
+    for (const old of mine.slice(0, Math.max(0, mine.length - 5))) {
+      await fs.unlink(join(backupDir, old))
+    }
+    return name
+  }
+
+  return { load, save, flush: () => queue, snapshot }
 }
 
 function isLibrary(value: unknown): value is Library {
@@ -114,7 +137,7 @@ const STATUSES: string[] = ['wishlist', 'in-progress', 'finished']
 
 // A stricter check than isLibrary, used before writing: the window should never
 // be able to replace your library with something that is not one.
-function isWellFormed(value: unknown): value is Library {
+export function isWellFormed(value: unknown): value is Library {
   if (!isLibrary(value)) return false
   return value.items.every((entry: unknown) => {
     const item = entry as Partial<MediaItem> | null

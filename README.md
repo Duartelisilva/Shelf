@@ -23,9 +23,14 @@ Electron, React and TypeScript for a much better interface.
   franchises, top genres, most rewatched
 - **Safe by default**: delete asks for confirmation and can be undone, years must be
   between 1901 and 2099, dates must exist and cannot be in the future
-- **Import from MediaTracker V1**, with a preview and a choice between genre and
-  collection for each old "saga" value
+- **Series progress**: season and episode, with +1 episode and next season buttons, and an
+  **In progress** tab for everything you are watching or reading
+- **Export and import your own library** as one `.shelf` file (library and images), either
+  adding to what you have or replacing it, and a **backups list with restore**
+- **First-time setup**: import from MediaTracker V1, with a preview and a choice between
+  genre and collection for each old "saga" value
 - **Your data stays on your computer**: one JSON file, saved safely, with a daily backup
+- **Settings** for the optional TMDB key, stored encrypted by Windows
 
 ## Download and run
 
@@ -43,13 +48,15 @@ In `%APPDATA%\Shelf`:
 | --- | --- |
 | `library.json` | everything you entered |
 | `images\` | the card images (one per item) |
-| `backups\` | a copy of the library from the first save of each day, the last 14 are kept |
+| `backups\` | the library from before the first change of each day (last 14), and before every restore or replace |
+| `settings.json` | your TMDB key, encrypted for your Windows account |
 
-Copy that folder to move Shelf to another computer.
+To move Shelf to another computer, use **Settings, Export library** and then **Import from a file**
+there: that carries the images too. (The key does not travel; paste it again.)
 
 ## Importing from MediaTracker V1
 
-Choose **Import from V1…** in the sidebar and pick the folder with your old files
+Only needed once, for first-time setup. Open **Settings**, then **First-time setup**, and pick the folder with your old files
 (`movies.json`, `seriess.json`, `bookss.json`, `wishlists.json`; V1 named them
 after its C# classes). Importing twice does not create duplicates.
 
@@ -73,7 +80,8 @@ Releases are built by GitHub Actions when a version tag is pushed; see
 
 ```
 src/
-  main/        the background process: file storage, images, import, IPC handlers
+  main/        the background process: file storage, images, export/import, settings, IPC handlers;
+               metadata/ holds everything that talks to TMDB, so the lookup can be removed cleanly
   preload/     the only functions the window may call (typed in shared/api.ts)
   renderer/    the interface (React): components/ for screens, lib/ for pure logic
   shared/      code used by both sides: data model, validation rules, V1 importer
@@ -98,8 +106,8 @@ See [docs/DATA-MODEL.md](docs/DATA-MODEL.md) for the data model and its rules.
 ## Roadmap
 
 - Optional poster and detail lookup (TMDB, Open Library) where you approve every match
+  (the key storage in Settings is done, the lookup itself is next)
 - Light theme and a custom app icon
-- Export and backup from inside the app
 
 ## License
 

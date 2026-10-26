@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Library, MediaItem } from '../../shared/types'
 import { AddItemDialog } from './components/AddItemDialog'
-import { ImportPanel } from './components/ImportPanel'
 import { LibraryScreen } from './components/LibraryScreen'
+import { SettingsScreen } from './components/SettingsScreen'
 import { Sidebar } from './components/Sidebar'
 import type { View } from './components/Sidebar'
 import { StatsScreen } from './components/StatsScreen'
@@ -56,15 +56,21 @@ function App(): React.JSX.Element {
   const persist = (next: Library): void => {
     setLibrary(next)
     setSaveError(null)
-    window.api.library
-      .save(next)
-      .catch((e) => setSaveError(`Could not save your library: ${String(e)}`))
+    window.api.library.save(next).catch((e) => setSaveError(`Could not save your library: ${String(e)}`))
   }
 
   const commit = (nextItems: MediaItem[], undoLabel?: string): void => {
     if (!library) return
     setUndo(undoLabel ? { label: undoLabel, previous: library } : null)
     persist({ ...library, items: nextItems })
+  }
+
+  // The main process already saved a library it replaced (import, restore); the
+  // window only has to show it, and forget things that may no longer exist.
+  const replaceLibrary = (next: Library): void => {
+    setLibrary(next)
+    setSelectedId(null)
+    setUndo(null)
   }
 
   const undoLast = (): void => {
@@ -99,8 +105,8 @@ function App(): React.JSX.Element {
       <main className="relative flex min-w-0 flex-1 flex-col">
         {notice && <p className="bg-amber-900/40 px-7 py-2 text-amber-200">{notice}</p>}
         {saveError && <p className="bg-red-900/40 px-7 py-2 text-red-200">{saveError}</p>}
-        {view === 'import' ? (
-          <ImportPanel onImported={setLibrary} onClose={() => setView('library')} />
+        {view === 'settings' ? (
+          <SettingsScreen onLibraryChanged={replaceLibrary} />
         ) : view === 'stats' ? (
           <StatsScreen items={items} />
         ) : (
@@ -111,30 +117,19 @@ function App(): React.JSX.Element {
             onSelect={setSelectedId}
             onChange={commit}
             onAdd={() => setAdding(true)}
-            onImport={() => setView('import')}
+            onOpenSettings={() => setView('settings')}
           />
         )}
         {undo && (
           <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-edge bg-panel px-5 py-3 shadow-lg">
             <span>{undo.label}</span>
-            <button
-              type="button"
-              onClick={undoLast}
-              className="cursor-pointer font-extrabold text-accent"
-            >
+            <button type="button" onClick={undoLast} className="cursor-pointer font-extrabold text-accent">
               Undo
             </button>
           </div>
         )}
       </main>
-      {adding && (
-        <AddItemDialog
-          items={items}
-          section={section}
-          onAdd={addItem}
-          onClose={() => setAdding(false)}
-        />
-      )}
+      {adding && <AddItemDialog items={items} section={section} onAdd={addItem} onClose={() => setAdding(false)} />}
     </div>
   )
 }

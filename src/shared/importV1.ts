@@ -81,17 +81,7 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
       warnings.push(`wishlist: unknown type for "${text(raw, 'Title') ?? '?'}", skipped`)
       continue
     }
-    const item = convert(
-      raw,
-      type,
-      'wishlist',
-      now,
-      newId(),
-      'wishlist',
-      warnings,
-      sagaAs,
-      sagaCounts
-    )
+    const item = convert(raw, type, 'wishlist', now, newId(), 'wishlist', warnings, sagaAs, sagaCounts)
     if (item) add(item, 'wishlist')
   }
 
@@ -108,8 +98,9 @@ export function mergeIntoLibrary(
   library: Library,
   imported: MediaItem[]
 ): { library: Library; added: number; skipped: number } {
-  const known = new Set(library.items.map(duplicateKey))
-  const fresh = imported.filter((item) => !known.has(duplicateKey(item)))
+  const knownKeys = new Set(library.items.map(duplicateKey))
+  const knownIds = new Set(library.items.map((item) => item.id))
+  const fresh = imported.filter((item) => !knownIds.has(item.id) && !knownKeys.has(duplicateKey(item)))
   return {
     library: { ...library, items: [...library.items, ...fresh] },
     added: fresh.length,
@@ -177,11 +168,7 @@ function convert(
   // The item is still imported; the warning tells you what to fix in Shelf.
   for (const problem of itemProblems(item)) warnings.push(`${source}: "${title}": ${problem}`)
   // A collection that just repeats the franchise name adds nothing.
-  if (
-    saga &&
-    sagaKind === 'collection' &&
-    saga.toLowerCase() !== (item.franchise ?? '').toLowerCase()
-  ) {
+  if (saga && sagaKind === 'collection' && saga.toLowerCase() !== (item.franchise ?? '').toLowerCase()) {
     item.collection = saga
   }
   return item

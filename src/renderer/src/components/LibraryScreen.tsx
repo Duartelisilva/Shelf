@@ -17,18 +17,10 @@ interface Props {
   onSelect: (id: string | null) => void
   onChange: (items: MediaItem[], undoLabel?: string) => void
   onAdd: () => void
-  onImport: () => void
+  onOpenSettings: () => void
 }
 
-export function LibraryScreen({
-  items,
-  section,
-  selectedId,
-  onSelect,
-  onChange,
-  onAdd,
-  onImport
-}: Props): React.JSX.Element {
+export function LibraryScreen({ items, section, selectedId, onSelect, onChange, onAdd, onOpenSettings }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [genre, setGenre] = useState<GenreFilter | null>(null)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
@@ -61,22 +53,11 @@ export function LibraryScreen({
   // The names used by each type, for suggestions. Types never share them.
   const vocab = useMemo(() => vocabularies(items), [items])
   // A genre picked in one section may not exist in another.
-  const activeGenre =
-    genre && genres.some((g) => g.type === genre.type && g.name === genre.name) ? genre : null
-  const needAttention = useMemo(
-    () => items.filter((i) => itemProblems(i).length > 0).length,
-    [items]
-  )
+  const activeGenre = genre && genres.some((g) => g.type === genre.type && g.name === genre.name) ? genre : null
+  const needAttention = useMemo(() => items.filter((i) => itemProblems(i).length > 0).length, [items])
   const showAttention = attentionOnly && needAttention > 0
   const visible = useMemo(
-    () =>
-      applyFilters(items, {
-        section,
-        query,
-        genre: activeGenre,
-        favoritesOnly,
-        attentionOnly: showAttention
-      }),
+    () => applyFilters(items, { section, query, genre: activeGenre, favoritesOnly, attentionOnly: showAttention }),
     [items, section, query, activeGenre, favoritesOnly, showAttention]
   )
   const shelves = useMemo(
@@ -103,9 +84,7 @@ export function LibraryScreen({
   )
   const bulkType = checkedTypes.size === 1 ? [...checkedTypes][0] : null
   const bulkBlocked =
-    checkedTypes.size > 1
-      ? 'Genres are separate for movies, series and books: select one kind at a time.'
-      : null
+    checkedTypes.size > 1 ? 'Genres are separate for movies, series and books: select one kind at a time.' : null
   const applyBulk = (input: string, mode: 'add' | 'remove'): void => {
     if (!bulkType) return
     const known = vocab[bulkType].genres
@@ -150,14 +129,9 @@ export function LibraryScreen({
           {needAttention > 0 && (
             <div className="flex items-center gap-3 rounded-lg bg-amber-900/40 px-4 py-2.5 text-amber-200">
               <span>
-                {needAttention === 1 ? '1 item has' : `${needAttention} items have`} a missing or
-                invalid year or date.
+                {needAttention === 1 ? '1 item has' : `${needAttention} items have`} a missing or invalid year or date.
               </span>
-              <button
-                type="button"
-                onClick={() => setAttentionOnly(!showAttention)}
-                className="cursor-pointer font-bold underline"
-              >
+              <button type="button" onClick={() => setAttentionOnly(!showAttention)} className="cursor-pointer font-bold underline">
                 {showAttention ? 'Show everything' : 'Show them'}
               </button>
             </div>
@@ -167,19 +141,11 @@ export function LibraryScreen({
             <div className="flex flex-col items-start gap-3 text-muted">
               <p>Your library is empty.</p>
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={onAdd}
-                  className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground"
-                >
+                <button type="button" onClick={onAdd} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground">
                   + Add your first item
                 </button>
-                <button
-                  type="button"
-                  onClick={onImport}
-                  className="cursor-pointer rounded-lg border border-edge px-4 py-2"
-                >
-                  Import from MediaTracker V1…
+                <button type="button" onClick={onOpenSettings} className="cursor-pointer rounded-lg border border-edge px-4 py-2">
+                  Import a backup or from V1…
                 </button>
               </div>
             </div>

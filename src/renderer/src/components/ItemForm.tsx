@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import type { Parsed } from '../../../shared/rules'
-import { itemProblems, parseDate, parsePositiveInt, parseYear } from '../../../shared/rules'
+import { itemProblems, parseDate, parsePositiveInt, parseSeasonNumber, parseYear } from '../../../shared/rules'
 import type { MediaItem, Status } from '../../../shared/types'
 import {
   cleanGenre,
+  nextEpisode,
+  nextSeason,
+  startWatching,
   todayISO,
   withDate,
   withGenre,
   withoutDate,
   withoutGenre,
+  withProgress,
   withStatus
 } from '../lib/edit'
 import { addedDate, formatDate, imageUrl, posterColor, readableOn } from '../lib/library'
@@ -82,10 +86,7 @@ function CheckedField<T>(props: {
   )
 }
 
-function NotesField(props: {
-  value: string
-  onCommit: (value: string) => void
-}): React.JSX.Element {
+function NotesField(props: { value: string; onCommit: (value: string) => void }): React.JSX.Element {
   const [draft, setDraft] = useState(props.value)
   return (
     <label className="flex flex-col gap-1">
@@ -101,10 +102,7 @@ function NotesField(props: {
   )
 }
 
-function RatingField(props: {
-  value: number | undefined
-  onCommit: (value: number | undefined) => void
-}): React.JSX.Element {
+function RatingField(props: { value: number | undefined; onCommit: (value: number | undefined) => void }): React.JSX.Element {
   const [draft, setDraft] = useState(props.value ?? 0)
   const commit = (): void => {
     if (draft !== (props.value ?? 0)) props.onCommit(draft)
@@ -116,11 +114,7 @@ function RatingField(props: {
         <span className="font-extrabold">
           {props.value === undefined && draft === 0 ? 'Not rated' : `${draft} / 10`}
           {props.value !== undefined && (
-            <button
-              type="button"
-              onClick={() => props.onCommit(undefined)}
-              className="ml-3 cursor-pointer text-sm font-normal text-accent"
-            >
+            <button type="button" onClick={() => props.onCommit(undefined)} className="ml-3 cursor-pointer text-sm font-normal text-accent">
               Clear
             </button>
           )}
@@ -153,13 +147,7 @@ interface Props {
 
 // Every field of an item. Used by the detail panel (changes save at once) and
 // by the Add dialog (changes go to a draft until you press Add).
-export function ItemForm({
-  item,
-  vocabulary,
-  onChange,
-  showProblems,
-  idPrefix
-}: Props): React.JSX.Element {
+export function ItemForm({ item, vocabulary, onChange, showProblems, idPrefix }: Props): React.JSX.Element {
   const [newGenre, setNewGenre] = useState('')
   const [dateText, setDateText] = useState('')
   const [dateError, setDateError] = useState<string | null>(null)
@@ -176,15 +164,12 @@ export function ItemForm({
   const progressLabel = item.type === 'book' ? 'Reading' : 'Watching'
   const statuses: [Status, string][] = [
     ['wishlist', 'Wishlist'],
-    ...(item.type !== 'movie' || item.status === 'in-progress'
-      ? [['in-progress', progressLabel] as [Status, string]]
-      : []),
+    ...(item.type !== 'movie' || item.status === 'in-progress' ? [['in-progress', progressLabel] as [Status, string]] : []),
     ['finished', finishedLabel]
   ]
 
   const addGenre = (): void => {
-    if (newGenre.trim())
-      onChange(withGenre(item, cleanGenre(newGenre, vocabulary.genres), vocabulary.genres))
+    if (newGenre.trim()) onChange(withGenre(item, cleanGenre(newGenre, vocabulary.genres), vocabulary.genres))
     setNewGenre('')
   }
 
@@ -237,15 +222,9 @@ export function ItemForm({
           style={{ background: fill, color: readableOn(fill) }}
         >
           {item.image ? (
-            <img
-              src={imageUrl(item.image)}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
+            <img src={imageUrl(item.image)} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
-            <span className="text-4xl font-extrabold opacity-40">
-              {item.franchiseOrder ?? (item.title.charAt(0).toUpperCase() || '?')}
-            </span>
+            <span className="text-4xl font-extrabold opacity-40">{item.franchiseOrder ?? (item.title.charAt(0).toUpperCase() || '?')}</span>
           )}
         </div>
         <div className="flex flex-col justify-center gap-2">
@@ -258,26 +237,16 @@ export function ItemForm({
             onClick={() => set({ isFavorite: !item.isFavorite })}
             aria-pressed={item.isFavorite}
             className={`cursor-pointer self-start rounded-full border px-3 py-1 ${
-              item.isFavorite
-                ? 'border-transparent bg-accent-soft font-bold text-accent'
-                : 'border-edge text-muted'
+              item.isFavorite ? 'border-transparent bg-accent-soft font-bold text-accent' : 'border-edge text-muted'
             }`}
           >
             {item.isFavorite ? '★ Favorite' : '☆ Favorite'}
           </button>
-          <button
-            type="button"
-            onClick={chooseImage}
-            className="cursor-pointer self-start rounded-lg border border-edge px-3 py-1.5 text-accent"
-          >
+          <button type="button" onClick={chooseImage} className="cursor-pointer self-start rounded-lg border border-edge px-3 py-1.5 text-accent">
             {item.image ? 'Change image…' : 'Choose image…'}
           </button>
           {item.image && (
-            <button
-              type="button"
-              onClick={removeImage}
-              className="cursor-pointer self-start text-muted hover:text-ink"
-            >
+            <button type="button" onClick={removeImage} className="cursor-pointer self-start text-muted hover:text-ink">
               Remove image
             </button>
           )}
@@ -286,13 +255,7 @@ export function ItemForm({
       {imageError && <p className="text-sm text-red-300">{imageError}</p>}
 
       <div className="flex gap-3">
-        <TextField
-          key={key('title', item.title)}
-          label="Title"
-          value={item.title}
-          autoFocus={idPrefix === 'add'}
-          onCommit={(v) => text(v) && set({ title: text(v)! })}
-        />
+        <TextField key={key('title', item.title)} label="Title" value={item.title} autoFocus={idPrefix === 'add'} onCommit={(v) => text(v) && set({ title: text(v)! })} />
         <div className="w-24 flex-none">
           <CheckedField
             key={key('year', item.year)}
@@ -323,28 +286,54 @@ export function ItemForm({
         </div>
       </div>
 
-      <RatingField
-        key={key('rating', item.rating)}
-        value={item.rating}
-        onCommit={(v) => set({ rating: v })}
-      />
+      {item.type === 'series' && item.status !== 'finished' && (
+        <div className="flex flex-col gap-2">
+          <span className={label}>Progress</span>
+          {item.progress ? (
+            <>
+              <div className="flex gap-3">
+                <CheckedField
+                  key={key('season', item.progress.season)}
+                  label="Season"
+                  value={String(item.progress.season)}
+                  parse={(text) => parseSeasonNumber(text, item.seasons)}
+                  onCommit={(v) => onChange(withProgress(item, v, item.progress?.episode ?? 1))}
+                />
+                <CheckedField
+                  key={key('episode', item.progress.episode)}
+                  label="Episode"
+                  value={String(item.progress.episode)}
+                  parse={parsePositiveInt}
+                  onCommit={(v) => onChange(withProgress(item, item.progress?.season ?? 1, v))}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => onChange(nextEpisode(item))} className="cursor-pointer rounded-lg border border-edge px-3 py-1.5 text-accent">
+                  +1 episode
+                </button>
+                <button type="button" onClick={() => onChange(nextSeason(item))} className="cursor-pointer rounded-lg border border-edge px-3 py-1.5 text-accent">
+                  Next season
+                </button>
+              </div>
+            </>
+          ) : (
+            <button type="button" onClick={() => onChange(startWatching(item))} className="cursor-pointer self-start rounded-lg border border-edge px-3 py-1.5 text-accent">
+              Start watching (S1 E1)
+            </button>
+          )}
+        </div>
+      )}
+
+      <RatingField key={key('rating', item.rating)} value={item.rating} onCommit={(v) => set({ rating: v })} />
 
       <div className="flex flex-col gap-2">
         <span className={label}>Genres</span>
         <div className="flex flex-wrap gap-2">
           {item.genres.length === 0 && <span className="text-muted">None yet</span>}
           {item.genres.map((g) => (
-            <span
-              key={g}
-              className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft py-1 pr-2 pl-3 text-accent"
-            >
+            <span key={g} className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft py-1 pr-2 pl-3 text-accent">
               {g}
-              <button
-                type="button"
-                aria-label={`Remove ${g}`}
-                onClick={() => onChange(withoutGenre(item, g))}
-                className="cursor-pointer"
-              >
+              <button type="button" aria-label={`Remove ${g}`} onClick={() => onChange(withoutGenre(item, g))} className="cursor-pointer">
                 ×
               </button>
             </span>
@@ -369,13 +358,7 @@ export function ItemForm({
 
       {(item.type === 'movie' || item.type === 'book') && (
         <div className="flex gap-3">
-          <TextField
-            key={key('franchise', item.franchise)}
-            label={item.type === 'book' ? 'Series' : 'Franchise'}
-            value={item.franchise ?? ''}
-            list={`${idPrefix}-franchises`}
-            onCommit={(v) => set({ franchise: text(v) })}
-          />
+          <TextField key={key('franchise', item.franchise)} label={item.type === 'book' ? 'Series' : 'Franchise'} value={item.franchise ?? ''} list={`${idPrefix}-franchises`} onCommit={(v) => set({ franchise: text(v) })} />
           <div className="w-20 flex-none">
             <CheckedField
               key={key('order', item.franchiseOrder)}
@@ -394,13 +377,7 @@ export function ItemForm({
         ))}
       </datalist>
 
-      <TextField
-        key={key('collection', item.collection)}
-        label="Collection"
-        value={item.collection ?? ''}
-        list={`${idPrefix}-collections`}
-        onCommit={(v) => set({ collection: text(v) })}
-      />
+      <TextField key={key('collection', item.collection)} label="Collection" value={item.collection ?? ''} list={`${idPrefix}-collections`} onCommit={(v) => set({ collection: text(v) })} />
       <datalist id={`${idPrefix}-collections`}>
         {vocabulary.collections.map((c) => (
           <option key={c} value={c} />
@@ -428,32 +405,20 @@ export function ItemForm({
         </div>
       )}
       {item.type === 'book' && (
-        <TextField
-          key={key('author', item.author)}
-          label="Author"
-          value={item.author ?? ''}
-          onCommit={(v) => set({ author: text(v) })}
-        />
+        <TextField key={key('author', item.author)} label="Author" value={item.author ?? ''} onCommit={(v) => set({ author: text(v) })} />
       )}
 
       <div className="flex flex-col gap-2">
         <span className={label}>{item.type === 'book' ? 'Read history' : 'Watch history'}</span>
         {item.dates.length === 0 && <span className="text-muted">No dates</span>}
-        {[...item.dates]
-          .sort()
-          .reverse()
-          .map((d) => (
-            <div key={d} className="flex justify-between border-b border-line py-1.5">
-              <span>{formatDate(d)}</span>
-              <button
-                type="button"
-                onClick={() => onChange(withoutDate(item, d))}
-                className="cursor-pointer text-muted hover:text-ink"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
+        {[...item.dates].sort().reverse().map((d) => (
+          <div key={d} className="flex justify-between border-b border-line py-1.5">
+            <span>{formatDate(d)}</span>
+            <button type="button" onClick={() => onChange(withoutDate(item, d))} className="cursor-pointer text-muted hover:text-ink">
+              Remove
+            </button>
+          </div>
+        ))}
         <div className="flex gap-2">
           <input
             value={dateText}
@@ -467,37 +432,21 @@ export function ItemForm({
             aria-invalid={!!dateError}
             className={`${input} ${dateError ? 'border-red-400' : ''}`}
           />
-          <button
-            type="button"
-            onClick={addDate}
-            className="cursor-pointer rounded-lg border border-edge px-3 text-accent"
-          >
+          <button type="button" onClick={addDate} className="cursor-pointer rounded-lg border border-edge px-3 text-accent">
             Add
           </button>
-          <button
-            type="button"
-            onClick={() => onChange(withDate(item, todayISO()))}
-            className="cursor-pointer rounded-lg border border-edge px-3 text-muted"
-          >
+          <button type="button" onClick={() => onChange(withDate(item, todayISO()))} className="cursor-pointer rounded-lg border border-edge px-3 text-muted">
             Today
           </button>
         </div>
         {dateError ? (
           <span className="text-xs text-red-300">{dateError}</span>
         ) : (
-          datePreview?.ok && (
-            <span className="text-xs text-muted">
-              Will be saved as {formatDate(datePreview.value)}
-            </span>
-          )
+          datePreview?.ok && <span className="text-xs text-muted">Will be saved as {formatDate(datePreview.value)}</span>
         )}
       </div>
 
-      <NotesField
-        key={key('notes', item.notes)}
-        value={item.notes ?? ''}
-        onCommit={(v) => set({ notes: text(v) })}
-      />
+      <NotesField key={key('notes', item.notes)} value={item.notes ?? ''} onCommit={(v) => set({ notes: text(v) })} />
     </div>
   )
 }

@@ -58,3 +58,30 @@ describe('image store', () => {
     expect(s.pathOf('../x.png')).toBeNull()
   })
 })
+
+describe('image store: reading, copies and age', () => {
+  it('reads a stored image, and returns null for a missing or invalid name', async () => {
+    const s = store()
+    const name = await s.importFile(source, ID)
+    expect((await s.read(name))?.toString()).toBe('fake image bytes')
+    expect(await s.read('123e4567-e89b-12d3-a456-426614174000-ffffff.png')).toBeNull()
+    expect(await s.read('../poster.PNG')).toBeNull()
+    expect(await s.exists(name)).toBe(true)
+  })
+
+  it('writes an image that came from an import, never replacing an existing one', async () => {
+    const s = store()
+    const name = '123e4567-e89b-12d3-a456-426614174000-aaaaaa.png'
+    await s.writeCopy(name, Buffer.from('first'))
+    await s.writeCopy(name, Buffer.from('second'))
+    expect((await s.read(name))?.toString()).toBe('first')
+    await expect(s.writeCopy('../evil.png', Buffer.from('x'))).rejects.toThrow('Invalid')
+  })
+
+  it('only removes unused images that are old enough', async () => {
+    const s = store()
+    await s.importFile(source, ID)
+    expect(await s.removeUnused(new Set(), 60_000)).toBe(0) // just created: too new
+    expect(await s.removeUnused(new Set(), 0)).toBe(1)
+  })
+})

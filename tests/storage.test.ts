@@ -68,9 +68,7 @@ describe('storage safety', () => {
   it('refuses to save something that is not a library, and keeps the old file', async () => {
     const storage = createStorage(dir)
     await storage.save(library(['Alien']))
-    await expect(
-      storage.save({ version: 1, items: [{ nonsense: true }] } as never)
-    ).rejects.toThrow('expected shape')
+    await expect(storage.save({ version: 1, items: [{ nonsense: true }] } as never)).rejects.toThrow('expected shape')
     await expect(storage.save(null as never)).rejects.toThrow('expected shape')
     expect((await storage.load()).library).toEqual(library(['Alien']))
   })
@@ -80,5 +78,33 @@ describe('storage safety', () => {
     await expect(storage.save(null as never)).rejects.toThrow()
     await storage.save(library(['Heat']))
     expect((await storage.load()).library).toEqual(library(['Heat']))
+  })
+})
+
+describe('storage snapshots', () => {
+  it('has nothing to keep before the first save, then keeps a copy of the current library', async () => {
+    const storage = createStorage(dir)
+    expect(await storage.snapshot('restore')).toBeNull()
+    await storage.save(library(['Alien']))
+    const name = await storage.snapshot('restore')
+    expect(name).toContain('before-restore-')
+    expect(JSON.parse(await readFile(join(dir, 'backups', name!), 'utf8'))).toEqual(library(['Alien']))
+  })
+
+  it('keeps only the newest 5 safety copies per reason', async () => {
+    let tick = 0
+    const storage = createStorage(dir, { now: () => new Date(2026, 0, 1, 0, 0, ++tick) })
+    await storage.save(library(['Alien']))
+    for (let i = 0; i < 7; i++) await storage.snapshot('import')
+    const copies = (await readdir(join(dir, 'backups'))).filter((n) => n.startsWith('before-import-'))
+    expect(copies).toHaveLength(5)
+  })
+
+  it('flush waits for the saves already requested', async () => {
+    const storage = createStorage(dir)
+    void storage.save(library(['A']))
+    void storage.save(library(['B']))
+    await storage.flush()
+    expect((await storage.load()).library).toEqual(library(['B']))
   })
 })

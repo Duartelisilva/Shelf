@@ -6,7 +6,7 @@ import { itemProblems } from '../../../shared/rules'
 import type { MediaItem, MediaType } from '../../../shared/types'
 import { MEDIA_TYPES, TYPE_PLURAL } from './vocab'
 
-export type Section = 'library' | MediaType | 'wishlist' | 'favorites'
+export type Section = 'library' | MediaType | 'in-progress' | 'wishlist' | 'favorites'
 export type GroupBy = 'franchise' | 'genre' | 'collection' | 'none'
 
 export const SECTION_TITLES: Record<Section, string> = {
@@ -14,6 +14,7 @@ export const SECTION_TITLES: Record<Section, string> = {
   movie: 'Movies',
   series: 'Series',
   book: 'Books',
+  'in-progress': 'In progress',
   wishlist: 'Wishlist',
   favorites: 'Favorites'
 }
@@ -45,6 +46,8 @@ export function sectionItems(items: MediaItem[], section: Section): MediaItem[] 
   switch (section) {
     case 'library':
       return items
+    case 'in-progress':
+      return items.filter((i) => i.status === 'in-progress')
     case 'wishlist':
       return items.filter((i) => i.status === 'wishlist')
     case 'favorites':
@@ -85,8 +88,7 @@ export function applyFilters(items: MediaItem[], filters: Filters): MediaItem[] 
     (item) =>
       (!filters.favoritesOnly || item.isFavorite) &&
       (!filters.attentionOnly || itemProblems(item).length > 0) &&
-      (!filters.genre ||
-        (item.type === filters.genre.type && item.genres.includes(filters.genre.name))) &&
+      (!filters.genre || (item.type === filters.genre.type && item.genres.includes(filters.genre.name))) &&
       matchesQuery(item, filters.query)
   )
 }
@@ -174,17 +176,11 @@ export function groupItems(
   } else {
     const keysOf = (item: MediaItem): string[] =>
       groupBy === 'franchise'
-        ? item.franchise
-          ? [item.franchise]
-          : []
+        ? item.franchise ? [item.franchise] : []
         : groupBy === 'collection'
-          ? item.collection
-            ? [item.collection]
-            : []
+          ? item.collection ? [item.collection] : []
           : item.genres
-    const empty = { franchise: 'Standalone', collection: 'No collection', genre: 'No genre' }[
-      groupBy
-    ]
+    const empty = { franchise: 'Standalone', collection: 'No collection', genre: 'No genre' }[groupBy]
     const inShelf = custom ? compare : groupBy === 'franchise' ? byOrder : byTitle
     const mixed = new Set(rest.map((i) => i.type)).size > 1
     const tagFor = (type: MediaType): string | undefined => (mixed ? TYPE_PLURAL[type] : undefined)
@@ -205,9 +201,7 @@ export function groupItems(
     const named: Shelf[] = [...groups.values()]
       .sort((a, b) =>
         groupBy === 'genre'
-          ? b.members.length - a.members.length ||
-            a.name.localeCompare(b.name) ||
-            rank(a.type) - rank(b.type)
+          ? b.members.length - a.members.length || a.name.localeCompare(b.name) || rank(a.type) - rank(b.type)
           : a.name.localeCompare(b.name) || rank(a.type) - rank(b.type)
       )
       .map((g) => ({
@@ -227,23 +221,13 @@ export function groupItems(
       : [...named, ...looseShelves]
   }
 
-  if (wishlist.length)
-    shelves.push({ id: 'wishlist', title: 'Wishlist', items: [...wishlist].sort(compare) })
+  if (wishlist.length) shelves.push({ id: 'wishlist', title: 'Wishlist', items: [...wishlist].sort(compare) })
   return shelves
 }
 
 // Items without their own color get one from this palette. The color is chosen
 // from the franchise name when there is one, so a franchise looks consistent.
-const PALETTE = [
-  '#234a73',
-  '#7a2e2e',
-  '#1f6554',
-  '#8a5a1c',
-  '#4a5a22',
-  '#5f3a80',
-  '#7a2450',
-  '#3b4a6b'
-]
+const PALETTE = ['#234a73', '#7a2e2e', '#1f6554', '#8a5a1c', '#4a5a22', '#5f3a80', '#7a2450', '#3b4a6b']
 
 export function posterColor(item: MediaItem): string {
   if (item.color) return item.color
@@ -272,8 +256,7 @@ export function formatDate(iso: string): string {
 }
 
 // Card images are served by the app itself (see src/main/images.ts).
-export const imageUrl = (fileName: string): string =>
-  `shelf-image://img/${encodeURIComponent(fileName)}`
+export const imageUrl = (fileName: string): string => `shelf-image://img/${encodeURIComponent(fileName)}`
 
 // When the item was added, as dd/mm/yyyy in the computer's own time zone.
 export function addedDate(item: MediaItem): string {
