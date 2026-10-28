@@ -44,7 +44,7 @@ describe('export and import', () => {
     // another computer
     const b = await setup()
     const pending = await b.service.inspect(file)
-    expect(pending.preview).toMatchObject({ file: 'backup.shelf', newItems: 2, alreadyHere: 0, images: 1, counts: { movies: 2 } })
+    expect(pending.preview).toMatchObject({ file: 'backup.shelf', newItems: 2, alreadyHere: 0, changed: [], images: 1, counts: { movies: 2 } })
     const added = await pending.commit('add')
     expect(added).toMatchObject({ added: 2, skipped: 0 })
     expect((await b.images.read(image))?.toString()).toBe('poster bytes')
@@ -52,7 +52,7 @@ describe('export and import', () => {
     // importing the same file again adds nothing
     const again = await b.service.inspect(file)
     expect(again.preview).toMatchObject({ newItems: 0, alreadyHere: 2 })
-    expect(await again.commit('add')).toMatchObject({ added: 0, skipped: 2 })
+    expect(await again.commit('add')).toMatchObject({ added: 0, updated: 0, skipped: 2 })
 
     // replace: the library becomes exactly the file, and the old one is kept as a safety copy
     await b.storage.save({ version: 1, items: [...(await b.storage.load()).library.items, item({ id: 'x', title: 'Extra', year: 2000 })] })
@@ -70,6 +70,57 @@ describe('export and import', () => {
     await writeFile(bad, 'not a zip')
     await expect(a.service.inspect(bad)).rejects.toThrow('could not be opened')
     expect((await a.storage.load()).library.items).toHaveLength(1)
+  })
+})
+
+describe('importing changes', () => {
+  it('notices an item you changed, leaves it alone in Add mode, and updates it in Update mode', async () => {
+    const a = await setup()
+    const original: Library = {
+      version: 1,
+      items: [item({ id: 'a', title: 'Alien', year: 1979, rating: 9 }), item({ id: 'b', title: 'Heat', year: 1995 }), item({ id: 'c', title: 'Dune', year: 2021 })]
+    }
+    await a.storage.save(original)
+    const file = join(a.dir, 'backup.shelf')
+    await a.service.exportTo(file)
+
+    // after the export: Heat goes back to the wishlist, Alien is rerated, Dune is deleted
+    await a.storage.save({
+      version: 1,
+      items: [item({ id: 'a', title: 'Alien', year: 1979, rating: 5 }), item({ id: 'b', title: 'Heat', year: 1995, status: 'wishlist' })]
+    })
+
+    const pending = await a.service.inspect(file)
+    expect(pending.preview.newItems).toBe(1) // Dune
+    expect(pending.preview.alreadyHere).toBe(0)
+    expect(pending.preview.changed).toEqual([
+      { id: 'a', title: 'Alien', changes: ['rating'] },
+      { id: 'b', title: 'Heat', changes: ['status (wishlist → seen or read)'] }
+    ])
+
+    const added = await pending.commit('add')
+    expect(added).toMatchObject({ added: 1, updated: 0 })
+    const afterAdd = (await a.storage.load()).library.items
+    expect(afterAdd.find((i) => i.id === 'b')?.status).toBe('wishlist') // untouched
+    expect(afterAdd.find((i) => i.id === 'a')?.rating).toBe(5)
+
+    const updated = await (await a.service.inspect(file)).commit('update')
+    expect(updated).toMatchObject({ added: 0, updated: 2, skipped: 1 })
+    const afterUpdate = (await a.storage.load()).library.items
+    expect(afterUpdate.find((i) => i.id === 'b')?.status).toBe('finished')
+    expect(afterUpdate.find((i) => i.id === 'a')?.rating).toBe(9)
+    expect(afterUpdate).toHaveLength(3)
+    expect((await a.service.listBackups()).some((b) => b.kind === 'import')).toBe(true)
+  })
+
+  it('does not keep a safety copy, or touch anything, when nothing differs', async () => {
+    const a = await setup()
+    await a.storage.save({ version: 1, items: [item({ id: 'a', title: 'Alien', year: 1979 })] })
+    const file = join(a.dir, 'same.shelf')
+    await a.service.exportTo(file)
+    const summary = await (await a.service.inspect(file)).commit('update')
+    expect(summary).toMatchObject({ added: 0, updated: 0, skipped: 1 })
+    expect((await a.service.listBackups()).filter((b) => b.kind === 'import')).toHaveLength(0)
   })
 })
 

@@ -102,7 +102,7 @@ export function registerIpc(): void {
 
   ipcMain.handle(CHANNELS.dataCommitImport, async (_event, mode: ImportMode): Promise<DataImportSummary> => {
     if (!pendingImport) throw new Error('No file was chosen.')
-    if (mode !== 'add' && mode !== 'replace') throw new Error('Unknown import mode.')
+    if (mode !== 'add' && mode !== 'update' && mode !== 'replace') throw new Error('Unknown import mode.')
     const summary = await pendingImport.commit(mode)
     pendingImport = null
     return summary

@@ -47,7 +47,16 @@ export interface ImportSummary {
 }
 
 // Export and import of your own library file (.shelf)
-export type ImportMode = 'add' | 'replace'
+// add: only items you do not have; update: those plus the file's version of items that
+// differ; replace: your library becomes exactly the file.
+export type ImportMode = 'add' | 'update' | 'replace'
+
+// An item that is in both your library and the file, but differs.
+export interface ChangedItem {
+  id: string
+  title: string
+  changes: string[] // what differs, your version -> the file's
+}
 
 export interface ExportResult {
   path: string
@@ -62,13 +71,15 @@ export interface ImportPreview {
   counts: { movies: number; series: number; books: number; wishlist: number }
   images: number
   newItems: number // not in your library yet
-  alreadyHere: number
+  changed: ChangedItem[] // in both, but different
+  alreadyHere: number // in both and identical
   warnings: string[]
 }
 
 export interface DataImportSummary {
   mode: ImportMode
   added: number
+  updated: number
   skipped: number
   warnings: string[]
   library: Library

@@ -101,3 +101,13 @@ still finds its images.
 
 The TMDB key lives in `settings.json`, encrypted with Electron's `safeStorage` (Windows
 ties it to your account). The window can save, test and remove it but never reads it back.
+
+### Import modes
+
+The import preview compares the file with your library by item id and lists what differs
+(for example `status (wishlist -> seen or read)`, `rating`). Three modes:
+
+- **Add new only**: adds items you do not have; existing items are never touched.
+- **Add and update**: also gives the items that differ the file's version, after keeping a
+  safety copy.
+- **Replace all**: your library becomes exactly the file, after keeping a safety copy.

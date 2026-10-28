@@ -79,9 +79,10 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
       const summary = await window.api.data.commitImport(chosen)
       onLibraryChanged(summary.library)
       setPreview(null)
-      return chosen === 'add'
-        ? `Added ${summary.added} items (${summary.skipped} were already in your library).`
-        : `Your library now has ${summary.added} items.`
+      if (chosen === 'replace') return `Your library now has ${summary.added} items.`
+      const parts = [`Added ${summary.added} items`]
+      if (chosen === 'update') parts.push(`updated ${summary.updated}`)
+      return `${parts.join(', ')}. ${summary.skipped} were already in your library.`
     })
 
   const importNow = (): void => {
@@ -89,12 +90,21 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
       void doImport('add')
       return
     }
-    setConfirm({
-      title: 'Replace your library?',
-      message: 'Your library will become exactly what is in this file. A copy of your current library is kept in the backups list below.',
-      confirmLabel: 'Replace',
-      run: () => doImport('replace')
-    })
+    setConfirm(
+      mode === 'update'
+        ? {
+            title: 'Update changed items?',
+            message: `${preview?.changed.length ?? 0} items in your library will take the version in this file. A copy of your current library is kept in the backups list below.`,
+            confirmLabel: 'Update',
+            run: () => doImport('update')
+          }
+        : {
+            title: 'Replace your library?',
+            message: 'Your library will become exactly what is in this file. A copy of your current library is kept in the backups list below.',
+            confirmLabel: 'Replace',
+            run: () => doImport('replace')
+          }
+    )
   }
 
   const restore = (info: BackupInfo): void =>
@@ -143,15 +153,27 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
             {preview.counts.series} series, {preview.counts.books} books, {preview.counts.wishlist} on the wishlist, {preview.images} images.
           </p>
           <p>
-            <span className="font-bold">{preview.newItems}</span> new to your library, <span className="font-bold">{preview.alreadyHere}</span> already there.
+            <span className="font-bold">{preview.newItems}</span> new, <span className="font-bold">{preview.changed.length}</span> different from yours,{' '}
+            <span className="font-bold">{preview.alreadyHere}</span> identical.
           </p>
+          {preview.changed.length > 0 && (
+            <div className="flex flex-col gap-1 text-sm">
+              <p className="text-muted">Different from your library (your version, then the file&apos;s):</p>
+              {preview.changed.slice(0, 20).map((c) => (
+                <p key={c.id}>
+                  <span className="font-bold">{c.title}</span> <span className="text-muted">· {c.changes.join(', ')}</span>
+                </p>
+              ))}
+              {preview.changed.length > 20 && <p className="text-muted">and {preview.changed.length - 20} more</p>}
+            </div>
+          )}
           {preview.warnings.map((w) => (
             <p key={w} className="text-sm text-amber-300">
               {w}
             </p>
           ))}
           <div className="flex overflow-hidden rounded-[10px] border border-edge" role="group" aria-label="Import mode">
-            {(['add', 'replace'] as const).map((m) => (
+            {(['add', 'update', 'replace'] as const).map((m) => (
               <button
                 key={m}
                 type="button"
@@ -159,14 +181,16 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
                 aria-pressed={mode === m}
                 className={`flex-1 cursor-pointer px-3 py-2 ${mode === m ? 'bg-accent-soft font-bold text-accent' : 'text-muted'}`}
               >
-                {m === 'add' ? 'Add to my library' : 'Replace my library'}
+                {m === 'add' ? 'Add new only' : m === 'update' ? 'Add and update' : 'Replace all'}
               </button>
             ))}
           </div>
           <p className="text-sm text-muted">
             {mode === 'add'
-              ? 'Adds the new items and leaves everything else as it is.'
-              : 'Your library becomes exactly this file. A copy of the current one is kept first.'}
+              ? 'Adds the new items. Items you already have are left exactly as they are, even if the file has a different version of them.'
+              : mode === 'update'
+                ? 'Adds the new items and gives the different ones the version from the file. Everything else is left alone. A copy of your current library is kept first.'
+                : 'Your library becomes exactly this file. A copy of the current one is kept first.'}
           </p>
           <div className="flex gap-3">
             <button type="button" onClick={importNow} disabled={busy} className={primary}>

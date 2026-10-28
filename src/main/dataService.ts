@@ -3,10 +3,11 @@
 
 import { promises as fs } from 'node:fs'
 import { basename } from 'node:path'
-import type { BackupInfo, DataImportSummary, ExportResult, ImportMode, ImportPreview } from '../shared/api'
+import type { BackupInfo, ChangedItem, DataImportSummary, ExportResult, ImportMode, ImportPreview } from '../shared/api'
 import { mergeIntoLibrary } from '../shared/importV1'
 import type { Library, MediaItem } from '../shared/types'
 import { buildArchive, parseArchive } from './archive'
+import { changesBetween } from './itemDiff'
 import type { ParsedArchive } from './archive'
 import { listBackups, readBackup } from './backups'
 import type { ImageStore } from './imageStore'
@@ -58,6 +59,13 @@ export function createDataService({ storage, images, backupsDir, appVersion, now
 
     const merge = mergeIntoLibrary(current, parsed.library.items)
     const items = parsed.library.items
+    const mine = new Map(current.items.map((i) => [i.id, i]))
+    const changed: ChangedItem[] = []
+    for (const incoming of items) {
+      const existing = mine.get(incoming.id)
+      const changes = existing ? changesBetween(existing, incoming) : []
+      if (changes.length > 0) changed.push({ id: incoming.id, title: incoming.title, changes })
+    }
     const count = (type: string): number =>
       items.filter((i) => i.type === type && i.status !== 'wishlist').length
 
@@ -73,7 +81,8 @@ export function createDataService({ storage, images, backupsDir, appVersion, now
       },
       images: parsed.images.size,
       newItems: merge.added,
-      alreadyHere: merge.skipped,
+      changed,
+      alreadyHere: merge.skipped - changed.length,
       warnings: parsed.warnings
     }
     return { preview, commit: (mode) => commit(parsed, mode) }
@@ -105,7 +114,31 @@ export function createDataService({ storage, images, backupsDir, appVersion, now
       for (const item of parsed.library.items) items.push(await withImage(item, parsed, warnings))
       const library: Library = { version: 1, items }
       await storage.save(library)
-      return { mode, added: items.length, skipped: 0, warnings, library }
+      return { mode, added: items.length, updated: 0, skipped: 0, warnings, library }
+    }
+
+    if (mode === 'update') {
+      // New items are added, and items that differ take the file's version.
+      // Everything else stays exactly as it is.
+      const incomingById = new Map(parsed.library.items.map((i) => [i.id, i]))
+      const merged = mergeIntoLibrary(current, parsed.library.items)
+      const fresh = merged.library.items.slice(current.items.length)
+      const items: MediaItem[] = []
+      let updated = 0
+      for (const existing of current.items) {
+        const incoming = incomingById.get(existing.id)
+        if (incoming && changesBetween(existing, incoming).length > 0) {
+          items.push(await withImage(incoming, parsed, warnings))
+          updated += 1
+        } else {
+          items.push(existing)
+        }
+      }
+      for (const item of fresh) items.push(await withImage(item, parsed, warnings))
+      if (updated > 0) await storage.snapshot('import') // something existing is overwritten
+      const library: Library = { ...current, items }
+      await storage.save(library)
+      return { mode, added: merged.added, updated, skipped: merged.skipped - updated, warnings, library }
     }
 
     const merged = mergeIntoLibrary(current, parsed.library.items)
@@ -114,7 +147,7 @@ export function createDataService({ storage, images, backupsDir, appVersion, now
     for (const item of fresh) stored.push(await withImage(item, parsed, warnings))
     const library: Library = { ...current, items: [...current.items, ...stored] }
     await storage.save(library)
-    return { mode, added: merged.added, skipped: merged.skipped, warnings, library }
+    return { mode, added: merged.added, updated: 0, skipped: merged.skipped, warnings, library }
   }
 
   async function restoreBackup(name: string): Promise<Library> {
