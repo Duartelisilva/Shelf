@@ -12,15 +12,19 @@ import type {
   ImportPreview,
   ImportSummary,
   KeyCheck,
+  LookupDetails,
+  LookupSearch,
+  LookupSource,
   V1Scan
 } from '../shared/api'
 import { importV1, mergeIntoLibrary } from '../shared/importV1'
 import type { SagaKind } from '../shared/importV1'
-import type { Library } from '../shared/types'
+import type { Library, MediaType } from '../shared/types'
 import { ARCHIVE_EXTENSION } from './archive'
 import { createDataService } from './dataService'
 import type { PendingImport } from './dataService'
 import { createImages } from './images'
+import { createLookup } from './metadata/lookup'
 import { checkTmdbKey } from './metadata/tmdb'
 import { createSecretBox } from './secret'
 import { createSettingsStore } from './settings'
@@ -53,6 +57,7 @@ export function registerIpc(): void {
     backupsDir: join(userData, BACKUPS_DIR),
     appVersion: app.getVersion()
   })
+  const lookup = createLookup({ getTmdbKey: () => settings.getTmdbKey(), images: images.store })
   // What the user picked but has not confirmed yet. Kept here, not in the window.
   let pendingFolder: string | null = null
   let pendingImport: PendingImport | null = null
@@ -125,6 +130,27 @@ export function registerIpc(): void {
     if (!key) return { ok: false, error: 'No key is saved yet.' }
     return checkTmdbKey(key)
   })
+
+  // ----- optional lookup of posters and details (everything here is checked: the
+  // window only names a type, a text and an id, never an address)
+  const TYPES: string[] = ['movie', 'series', 'book']
+  const SOURCES: string[] = ['tmdb', 'openlibrary']
+  const validId = (id: unknown): id is string => typeof id === 'string' && /^[A-Za-z0-9]{1,20}$/.test(id)
+  ipcMain.handle(CHANNELS.metadataSearch, (_event, type: MediaType, query: string): Promise<LookupSearch> | LookupSearch =>
+    TYPES.includes(type) && typeof query === 'string' ? lookup.search(type, query) : { ok: false, error: 'Invalid search.' }
+  )
+  ipcMain.handle(
+    CHANNELS.metadataDetails,
+    (_event, type: MediaType, source: LookupSource, id: string): Promise<LookupDetails> | LookupDetails =>
+      TYPES.includes(type) && SOURCES.includes(source) && validId(id)
+        ? lookup.details(type, source, id)
+        : { ok: false, error: 'Invalid request.' }
+  )
+  ipcMain.handle(CHANNELS.metadataPoster, (_event, itemId: string, source: LookupSource, id: string) =>
+    typeof itemId === 'string' && SOURCES.includes(source) && validId(id)
+      ? lookup.downloadPoster(itemId, source, id)
+      : { error: 'Invalid request.' }
+  )
 
   // ----- first-time setup: import from MediaTracker V1
   ipcMain.handle(CHANNELS.importPick, async (): Promise<V1Scan | null> => {

@@ -18,6 +18,7 @@ const ITEM_ID = /^[0-9a-f-]{36}$/
 
 export interface ImageStore {
   importFile(sourcePath: string, itemId: string): Promise<string>
+  importBytes(data: Buffer, extension: string, itemId: string): Promise<string>
   remove(fileName: string): Promise<void>
   removeUnused(keep: ReadonlySet<string>, minAgeMs?: number): Promise<number>
   read(fileName: string): Promise<Buffer | null>
@@ -37,6 +38,18 @@ export function createImageStore(dir: string, suffix: () => string = () => rando
       await fs.mkdir(dir, { recursive: true })
       const fileName = `${itemId}-${suffix()}.${extension}`
       await fs.copyFile(sourcePath, join(dir, fileName), constants.COPYFILE_EXCL)
+      return fileName
+    },
+
+    // Stores downloaded bytes (a poster) as the item's image copy.
+    async importBytes(data, extension, itemId) {
+      if (!ITEM_ID.test(itemId)) throw new Error('Invalid item.')
+      const ext = extension.toLowerCase()
+      if (!IMAGE_EXTENSIONS.includes(ext)) throw new Error('Choose a PNG, JPG, WEBP or GIF image.')
+      if (data.length > MAX_IMAGE_BYTES) throw new Error('That image is larger than 15 MB.')
+      await fs.mkdir(dir, { recursive: true })
+      const fileName = `${itemId}-${suffix()}.${ext}`
+      await fs.writeFile(join(dir, fileName), data, { flag: 'wx' })
       return fileName
     },
 

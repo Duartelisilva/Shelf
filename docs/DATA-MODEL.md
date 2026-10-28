@@ -71,6 +71,12 @@ its type as one thing:
 - changing genres on several items at once needs a selection of one type
 - Stats show genres, franchises and ratings for one type at a time
 
+## Lookup details
+
+When details from the optional lookup are applied, the item gets `meta` (source, id, short
+description, approval time). See [METADATA.md](METADATA.md), which also explains how to
+remove the feature.
+
 ## Series progress
 
 A series being watched can carry `progress: { season, episode }`, the last episode seen.

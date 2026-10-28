@@ -1,7 +1,7 @@
 // The contract between the app window (renderer) and the background process
 // (main). The renderer never touches files directly: it can only call these.
 
-import type { Library } from './types'
+import type { Library, MediaType } from './types'
 import type { SagaKind } from './importV1'
 
 export const CHANNELS = {
@@ -20,7 +20,10 @@ export const CHANNELS = {
   settingsStatus: 'settings:status',
   settingsSaveTmdbKey: 'settings:saveTmdbKey',
   settingsClearTmdbKey: 'settings:clearTmdbKey',
-  settingsTestTmdbKey: 'settings:testTmdbKey'
+  settingsTestTmdbKey: 'settings:testTmdbKey',
+  metadataSearch: 'metadata:search',
+  metadataDetails: 'metadata:details',
+  metadataPoster: 'metadata:poster'
 } as const
 
 export interface LoadResult {
@@ -101,6 +104,39 @@ export interface SettingsStatus {
 
 export type KeyCheck = { ok: true } | { ok: false; error: string }
 
+// Optional lookup of posters and details (TMDB for movies and series, Open Library for books)
+export type LookupSource = 'tmdb' | 'openlibrary'
+
+export interface LookupCandidate {
+  id: string
+  source: LookupSource
+  title: string
+  year?: number
+  subtitle?: string // authors, for books
+  overview?: string
+  thumb?: string // a small picture as a data address, fetched by the app itself
+}
+
+export type LookupSearch =
+  | { ok: true; candidates: LookupCandidate[] }
+  | { ok: false; error: string }
+
+// What a match offers. Nothing is applied until the user ticks it and confirms.
+export interface LookupProposal {
+  source: LookupSource
+  externalId: string
+  year?: number
+  yearEnd?: number
+  seasons?: number
+  genres: string[]
+  franchise?: string
+  author?: string
+  overview?: string
+  hasPoster: boolean
+}
+
+export type LookupDetails = { ok: true; proposal: LookupProposal } | { ok: false; error: string }
+
 // Result of choosing an image for an item: its stored file name, or a reason it failed.
 export type ImagePick = { fileName: string } | { error: string } | null
 
@@ -126,6 +162,11 @@ export interface ShelfApi {
     saveTmdbKey(key: string): Promise<KeyCheck>
     clearTmdbKey(): Promise<void>
     testTmdbKey(): Promise<KeyCheck>
+  }
+  metadata: {
+    search(type: MediaType, query: string): Promise<LookupSearch>
+    details(type: MediaType, source: LookupSource, id: string): Promise<LookupDetails>
+    downloadPoster(itemId: string, source: LookupSource, id: string): Promise<{ fileName: string } | { error: string }>
   }
   importV1: {
     pickFolder(): Promise<V1Scan | null>

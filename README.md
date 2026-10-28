@@ -16,7 +16,10 @@ Electron, React and TypeScript for a much better interface.
 - **One form for everything**: title, year, status, rating, genres, franchise and number,
   collection, series end year and seasons, book author, watch or read dates, notes and a
   card image. Used both to add and to edit
-- **Card images**: the app keeps its own copy, so the original file can be deleted
+- **Card images**: the app keeps its own copy, so the original file can be deleted. Or use
+  **Find poster & details…** to look one up (TMDB for movies and series with your own free key,
+  Open Library for books): you see the matches, tick what you want, and nothing changes
+  until you apply
 - **Genres, franchises and collections are separate for movies, series and books**
 - **Several items at once**: select items and set or remove a genre on all of them
 - **Stats** for movies, series and books: totals, top rated, items per year, most-followed
@@ -105,8 +108,6 @@ See [docs/DATA-MODEL.md](docs/DATA-MODEL.md) for the data model and its rules.
 
 ## Roadmap
 
-- Optional poster and detail lookup (TMDB, Open Library) where you approve every match
-  (the key storage in Settings is done, the lookup itself is next)
 - Light theme and a custom app icon
 
 ## License

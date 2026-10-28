@@ -85,3 +85,20 @@ describe('image store: reading, copies and age', () => {
     expect(await s.removeUnused(new Set(), 0)).toBe(1)
   })
 })
+
+describe('image store: downloaded images', () => {
+  it('stores downloaded bytes under a name tied to the item', async () => {
+    const s = store()
+    const name = await s.importBytes(Buffer.from('poster'), 'JPG', ID)
+    expect(name.startsWith(ID)).toBe(true)
+    expect(name.endsWith('.jpg')).toBe(true)
+    expect((await s.read(name))?.toString()).toBe('poster')
+  })
+
+  it('refuses a wrong type, an invalid item and a file that is too large', async () => {
+    const s = store()
+    await expect(s.importBytes(Buffer.from('x'), 'exe', ID)).rejects.toThrow('PNG')
+    await expect(s.importBytes(Buffer.from('x'), 'png', '../evil')).rejects.toThrow('Invalid')
+    await expect(s.importBytes(Buffer.alloc(15 * 1024 * 1024 + 1), 'png', ID)).rejects.toThrow('15 MB')
+  })
+})

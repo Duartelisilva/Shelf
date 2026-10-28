@@ -27,6 +27,11 @@ const api: ShelfApi = {
     clearTmdbKey: () => ipcRenderer.invoke(CHANNELS.settingsClearTmdbKey),
     testTmdbKey: () => ipcRenderer.invoke(CHANNELS.settingsTestTmdbKey)
   },
+  metadata: {
+    search: (type, query) => ipcRenderer.invoke(CHANNELS.metadataSearch, type, query),
+    details: (type, source, id) => ipcRenderer.invoke(CHANNELS.metadataDetails, type, source, id),
+    downloadPoster: (itemId, source, id) => ipcRenderer.invoke(CHANNELS.metadataPoster, itemId, source, id)
+  },
   importV1: {
     pickFolder: () => ipcRenderer.invoke(CHANNELS.importPick),
     commit: (sagaAs) => ipcRenderer.invoke(CHANNELS.importCommit, sagaAs)

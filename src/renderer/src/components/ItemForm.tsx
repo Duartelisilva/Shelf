@@ -17,6 +17,7 @@ import {
 } from '../lib/edit'
 import { addedDate, formatDate, imageUrl, posterColor, readableOn } from '../lib/library'
 import type { Vocabulary } from '../lib/vocab'
+import { LookupDialog } from './LookupDialog'
 
 const label = 'text-xs font-extrabold tracking-wide text-muted uppercase'
 const input = 'w-full rounded-lg border border-edge bg-surface px-3 py-2 text-ink'
@@ -152,6 +153,7 @@ export function ItemForm({ item, vocabulary, onChange, showProblems, idPrefix }:
   const [dateText, setDateText] = useState('')
   const [dateError, setDateError] = useState<string | null>(null)
   const [imageError, setImageError] = useState<string | null>(null)
+  const [lookupOpen, setLookupOpen] = useState(false)
   const set = (patch: Partial<MediaItem>): void => onChange({ ...item, ...patch })
   const text = (value: string): string | undefined => value.trim().replace(/\s+/g, ' ') || undefined
   const key = (name: string, value: unknown): string => `${item.id}-${name}-${String(value ?? '')}`
@@ -244,6 +246,9 @@ export function ItemForm({ item, vocabulary, onChange, showProblems, idPrefix }:
           </button>
           <button type="button" onClick={chooseImage} className="cursor-pointer self-start rounded-lg border border-edge px-3 py-1.5 text-accent">
             {item.image ? 'Change image…' : 'Choose image…'}
+          </button>
+          <button type="button" onClick={() => setLookupOpen(true)} className="cursor-pointer self-start rounded-lg border border-edge px-3 py-1.5 text-accent">
+            Find poster &amp; details…
           </button>
           {item.image && (
             <button type="button" onClick={removeImage} className="cursor-pointer self-start text-muted hover:text-ink">
@@ -447,6 +452,10 @@ export function ItemForm({ item, vocabulary, onChange, showProblems, idPrefix }:
       </div>
 
       <NotesField key={key('notes', item.notes)} value={item.notes ?? ''} onCommit={(v) => set({ notes: text(v) })} />
+
+      {lookupOpen && (
+        <LookupDialog item={item} knownGenres={vocabulary.genres} onApply={onChange} onClose={() => setLookupOpen(false)} />
+      )}
     </div>
   )
 }
