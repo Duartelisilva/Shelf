@@ -42,7 +42,7 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
   }
 
   const sagaValues = scan ? Object.entries(scan.sagaCounts).sort((a, b) => b[1] - a[1]) : []
-  const primary = 'cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground disabled:opacity-40'
+  const primary = 'cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-on-accent disabled:opacity-40'
 
   return (
     <details className="rounded-xl border border-line bg-surface p-5">
@@ -52,7 +52,7 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
           Pick the folder that holds your old files (movies.json, seriess.json, bookss.json,
           wishlists.json). Items already in Shelf are skipped.
         </p>
-        {error && <p className="rounded-lg bg-red-900/40 p-3 text-red-200">{error}</p>}
+        {error && <p className="rounded-lg bg-danger-soft p-3 text-danger">{error}</p>}
         <div>
           <button type="button" onClick={pickFolder} className={primary}>
             Choose folder…
@@ -66,7 +66,7 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
               {scan.missing.length > 0 && <span className="text-muted"> · not found: {scan.missing.join(', ')}</span>}
             </p>
             {scan.problems.map((p) => (
-              <p key={p} className="text-red-300">
+              <p key={p} className="text-danger">
                 {p}
               </p>
             ))}
@@ -99,7 +99,7 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
             )}
 
             {scan.warnings.map((w) => (
-              <p key={w} className="text-sm text-amber-300">
+              <p key={w} className="text-sm text-warn">
                 {w}
               </p>
             ))}
@@ -112,7 +112,7 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
         )}
 
         {summary && (
-          <p className="rounded-lg bg-emerald-900/40 p-3 text-emerald-200">
+          <p className="rounded-lg bg-ok-soft p-3 text-ok">
             Imported {summary.added} items ({summary.skipped} already in the library).
             {summary.warnings.length > 0 && ` ${summary.warnings.length} warnings.`}
           </p>

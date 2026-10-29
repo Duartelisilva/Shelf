@@ -33,7 +33,8 @@ Electron, React and TypeScript for a much better interface.
 - **First-time setup**: import from MediaTracker V1, with a preview and a choice between
   genre and collection for each old "saga" value
 - **Your data stays on your computer**: one JSON file, saved safely, with a daily backup
-- **Settings** for the optional TMDB key, stored encrypted by Windows
+- **Settings** for the colour theme (five themes, or match Windows light and dark) and the
+  optional TMDB key, stored encrypted by Windows
 
 ## Download and run
 

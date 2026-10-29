@@ -17,7 +17,7 @@ interface Props {
 export function PosterCard({ item, selected, selectMode, checked, showAdded, onPick }: Props): React.JSX.Element {
   const wishlist = item.status === 'wishlist'
   const fill = posterColor(item)
-  const ink = wishlist && !item.image ? '#a3acba' : readableOn(fill)
+  const ink = wishlist && !item.image ? 'var(--color-muted)' : readableOn(fill)
   const seen = lastDate(item)
   const doing = item.status === 'in-progress' ? (item.type === 'book' ? 'reading' : 'watching') : null
   const meta = [item.year, showAdded ? `added ${addedDate(item)}` : wishlist ? 'wishlist' : doing ? doing : seen ? `seen ${formatDate(seen)}` : null]
@@ -54,7 +54,7 @@ export function PosterCard({ item, selected, selectMode, checked, showAdded, onP
           {selectMode ? (
             <span
               className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-xs font-extrabold ${
-                checked ? 'border-accent bg-accent text-ground' : 'border-white/70 bg-black/30'
+                checked ? 'border-accent bg-accent text-on-accent' : 'border-white/70 bg-black/30'
               }`}
             >
               {checked ? '✓' : ''}

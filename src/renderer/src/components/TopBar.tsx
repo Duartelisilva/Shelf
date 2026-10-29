@@ -81,11 +81,7 @@ export function TopBar({
         onChange={(e) => {
           const value: string = e.target.value
           const cut = value.indexOf('|')
-          onGenre(
-            cut < 0
-              ? null
-              : { type: value.slice(0, cut) as GenreFilter['type'], name: value.slice(cut + 1) }
-          )
+          onGenre(cut < 0 ? null : { type: value.slice(0, cut) as GenreFilter['type'], name: value.slice(cut + 1) })
         }}
         aria-label="Filter by genre"
         className={control}
@@ -162,7 +158,7 @@ export function TopBar({
       <button
         type="button"
         onClick={onAdd}
-        className="cursor-pointer rounded-[10px] bg-accent px-[18px] py-2.5 font-extrabold text-ground"
+        className="cursor-pointer rounded-[10px] bg-accent px-[18px] py-2.5 font-extrabold text-on-accent"
       >
         + Add
       </button>

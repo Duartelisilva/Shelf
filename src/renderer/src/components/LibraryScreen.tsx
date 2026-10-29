@@ -127,7 +127,7 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
           </div>
 
           {needAttention > 0 && (
-            <div className="flex items-center gap-3 rounded-lg bg-amber-900/40 px-4 py-2.5 text-amber-200">
+            <div className="flex items-center gap-3 rounded-lg bg-warn-soft px-4 py-2.5 text-warn">
               <span>
                 {needAttention === 1 ? '1 item has' : `${needAttention} items have`} a missing or invalid year or date.
               </span>
@@ -141,7 +141,7 @@ export function LibraryScreen({ items, section, selectedId, onSelect, onChange, 
             <div className="flex flex-col items-start gap-3 text-muted">
               <p>Your library is empty.</p>
               <div className="flex gap-3">
-                <button type="button" onClick={onAdd} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground">
+                <button type="button" onClick={onAdd} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-on-accent">
                   + Add your first item
                 </button>
                 <button type="button" onClick={onOpenSettings} className="cursor-pointer rounded-lg border border-edge px-4 py-2">

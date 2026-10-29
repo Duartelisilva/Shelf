@@ -16,7 +16,7 @@ interface Confirm {
 }
 
 const button = 'cursor-pointer rounded-lg border border-edge px-4 py-2 disabled:cursor-not-allowed disabled:opacity-40'
-const primary = 'cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground disabled:cursor-not-allowed disabled:opacity-40'
+const primary = 'cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-on-accent disabled:cursor-not-allowed disabled:opacity-40'
 
 const formatBytes = (bytes: number): string =>
   bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -125,7 +125,7 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
       <h2 className="text-base font-extrabold">Your data</h2>
 
       {message && (
-        <p className={`rounded-lg p-3 ${message.ok ? 'bg-emerald-900/40 text-emerald-200' : 'bg-red-900/40 text-red-200'}`}>{message.text}</p>
+        <p className={`rounded-lg p-3 ${message.ok ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger'}`}>{message.text}</p>
       )}
 
       <div className="flex flex-col gap-2">
@@ -168,7 +168,7 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
             </div>
           )}
           {preview.warnings.map((w) => (
-            <p key={w} className="text-sm text-amber-300">
+            <p key={w} className="text-sm text-warn">
               {w}
             </p>
           ))}

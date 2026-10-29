@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { ThemeChoice } from '../../shared/themes'
 import type { Library, MediaItem } from '../../shared/types'
 import { AddItemDialog } from './components/AddItemDialog'
 import { LibraryScreen } from './components/LibraryScreen'
@@ -8,6 +9,10 @@ import type { View } from './components/Sidebar'
 import { StatsScreen } from './components/StatsScreen'
 import { sectionCounts, sectionItems } from './lib/library'
 import type { Section } from './lib/library'
+import { applyTheme, cachedTheme, watchSystemTheme } from './lib/theme'
+
+// The window opens with the colours it had last time, before anything is loaded.
+applyTheme(cachedTheme())
 
 function App(): React.JSX.Element {
   const [library, setLibrary] = useState<Library | null>(null)
@@ -18,6 +23,7 @@ function App(): React.JSX.Element {
   const [view, setView] = useState<View>('library')
   const [adding, setAdding] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [theme, setTheme] = useState<ThemeChoice>(cachedTheme)
   // The list as it was before the last undoable change (delete, bulk genre).
   const [undo, setUndo] = useState<{ label: string; previous: Library } | null>(null)
 
@@ -30,6 +36,21 @@ function App(): React.JSX.Element {
       })
       .catch((e) => setLoadError(String(e)))
   }, [])
+
+  // The saved colour theme (the cached one above is only used until it arrives).
+  useEffect(() => {
+    window.api.preferences
+      .get()
+      .then((preferences) => setTheme(preferences.theme))
+      .catch(() => undefined)
+  }, [])
+
+  // Shows the chosen theme, and follows Windows when the choice is "Match Windows".
+  useEffect(() => {
+    applyTheme(theme)
+    if (theme !== 'system') return
+    return watchSystemTheme(() => applyTheme('system'))
+  }, [theme])
 
   // Ctrl+N opens the add dialog.
   useEffect(() => {
@@ -73,6 +94,11 @@ function App(): React.JSX.Element {
     setUndo(null)
   }
 
+  const changeTheme = (next: ThemeChoice): void => {
+    setTheme(next)
+    window.api.preferences.setTheme(next).catch((e) => setSaveError(`Could not save the theme: ${String(e)}`))
+  }
+
   const undoLast = (): void => {
     if (!undo) return
     persist(undo.previous)
@@ -87,7 +113,7 @@ function App(): React.JSX.Element {
     setSelectedId(item.id)
   }
 
-  if (loadError) return <p className="p-8 text-red-300">{loadError}</p>
+  if (loadError) return <p className="p-8 text-danger">{loadError}</p>
   if (!library) return <p className="p-8 text-muted">Loading…</p>
 
   return (
@@ -103,10 +129,10 @@ function App(): React.JSX.Element {
         onView={setView}
       />
       <main className="relative flex min-w-0 flex-1 flex-col">
-        {notice && <p className="bg-amber-900/40 px-7 py-2 text-amber-200">{notice}</p>}
-        {saveError && <p className="bg-red-900/40 px-7 py-2 text-red-200">{saveError}</p>}
+        {notice && <p className="bg-warn-soft px-7 py-2 text-warn">{notice}</p>}
+        {saveError && <p className="bg-danger-soft px-7 py-2 text-danger">{saveError}</p>}
         {view === 'settings' ? (
-          <SettingsScreen onLibraryChanged={replaceLibrary} />
+          <SettingsScreen theme={theme} onTheme={changeTheme} onLibraryChanged={replaceLibrary} />
         ) : view === 'stats' ? (
           <StatsScreen items={items} />
         ) : (

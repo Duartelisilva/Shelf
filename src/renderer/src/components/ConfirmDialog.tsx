@@ -32,7 +32,7 @@ export function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm,
           <button
             type="button"
             onClick={onConfirm}
-            className={`cursor-pointer rounded-lg px-4 py-2 font-extrabold ${danger ? 'bg-red-600 text-white' : 'bg-accent text-ground'}`}
+            className={`cursor-pointer rounded-lg px-4 py-2 font-extrabold ${danger ? 'bg-red-600 text-white' : 'bg-accent text-on-accent'}`}
           >
             {confirmLabel}
           </button>

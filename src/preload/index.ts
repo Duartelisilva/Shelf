@@ -27,6 +27,10 @@ const api: ShelfApi = {
     clearTmdbKey: () => ipcRenderer.invoke(CHANNELS.settingsClearTmdbKey),
     testTmdbKey: () => ipcRenderer.invoke(CHANNELS.settingsTestTmdbKey)
   },
+  preferences: {
+    get: () => ipcRenderer.invoke(CHANNELS.preferencesGet),
+    setTheme: (theme) => ipcRenderer.invoke(CHANNELS.preferencesSetTheme, theme)
+  },
   metadata: {
     search: (type, query) => ipcRenderer.invoke(CHANNELS.metadataSearch, type, query),
     details: (type, source, id) => ipcRenderer.invoke(CHANNELS.metadataDetails, type, source, id),

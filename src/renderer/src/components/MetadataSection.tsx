@@ -87,7 +87,7 @@ export function MetadataSection(): React.JSX.Element {
       </p>
 
       {message && (
-        <p className={`rounded-lg p-3 ${message.ok ? 'bg-emerald-900/40 text-emerald-200' : 'bg-red-900/40 text-red-200'}`}>{message.text}</p>
+        <p className={`rounded-lg p-3 ${message.ok ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger'}`}>{message.text}</p>
       )}
 
       {hasKey ? (
@@ -114,14 +114,14 @@ export function MetadataSection(): React.JSX.Element {
             autoComplete="off"
             className="w-[360px] rounded-lg border border-edge bg-ground px-3 py-2"
           />
-          <button type="button" onClick={save} disabled={busy || !key.trim()} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground disabled:opacity-40">
+          <button type="button" onClick={save} disabled={busy || !key.trim()} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-on-accent disabled:opacity-40">
             Save key
           </button>
         </div>
       )}
 
       {status && !status.encryption && (
-        <p className="text-sm text-amber-300">
+        <p className="text-sm text-warn">
           This computer cannot store secrets securely, so a key cannot be saved here.
         </p>
       )}

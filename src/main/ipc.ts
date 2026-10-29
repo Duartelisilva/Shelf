@@ -26,6 +26,7 @@ import type { PendingImport } from './dataService'
 import { createImages } from './images'
 import { createLookup } from './metadata/lookup'
 import { checkTmdbKey } from './metadata/tmdb'
+import { createPreferencesStore } from './preferences'
 import { createSecretBox } from './secret'
 import { createSettingsStore } from './settings'
 import { BACKUPS_DIR, createStorage } from './storage'
@@ -57,6 +58,7 @@ export function registerIpc(): void {
     backupsDir: join(userData, BACKUPS_DIR),
     appVersion: app.getVersion()
   })
+  const preferences = createPreferencesStore(userData)
   const lookup = createLookup({ getTmdbKey: () => settings.getTmdbKey(), images: images.store })
   // What the user picked but has not confirmed yet. Kept here, not in the window.
   let pendingFolder: string | null = null
@@ -118,6 +120,10 @@ export function registerIpc(): void {
   ipcMain.handle(CHANNELS.dataOpenFolder, async () => {
     await shell.openPath(userData)
   })
+
+  // ----- preferences (the colour theme)
+  ipcMain.handle(CHANNELS.preferencesGet, () => preferences.get())
+  ipcMain.handle(CHANNELS.preferencesSetTheme, (_event, theme: unknown) => preferences.setTheme(theme as never))
 
   // ----- settings (the TMDB key)
   ipcMain.handle(CHANNELS.settingsStatus, () => settings.status())

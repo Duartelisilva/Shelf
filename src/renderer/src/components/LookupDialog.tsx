@@ -126,14 +126,14 @@ export function LookupDialog({ item, knownGenres, onApply, onClose }: Props): Re
                 aria-label="Search text"
                 className={`flex-1 ${field}`}
               />
-              <button type="button" onClick={search} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-ground">
+              <button type="button" onClick={search} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-on-accent">
                 Search
               </button>
             </div>
 
-            {error && <p className="rounded-lg bg-red-900/40 p-3 text-red-200">{error}</p>}
+            {error && <p className="rounded-lg bg-danger-soft p-3 text-danger">{error}</p>}
             {result === null && <p className="text-muted">Searching…</p>}
-            {result && !result.ok && <p className="rounded-lg bg-amber-900/40 p-3 text-amber-200">{result.error}</p>}
+            {result && !result.ok && <p className="rounded-lg bg-warn-soft p-3 text-warn">{result.error}</p>}
             {result?.ok && result.candidates.length === 0 && <p className="text-muted">No matches. Try a different title.</p>}
             {result?.ok &&
               result.candidates.map((c) => (
@@ -189,7 +189,7 @@ export function LookupDialog({ item, knownGenres, onApply, onClose }: Props): Re
               </label>
             ))}
 
-            {error && <p className="rounded-lg bg-red-900/40 p-3 text-red-200">{error}</p>}
+            {error && <p className="rounded-lg bg-danger-soft p-3 text-danger">{error}</p>}
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted">Data from {SOURCE_NAME[chosen.source]}.</span>
               <div className="flex gap-3">
@@ -200,7 +200,7 @@ export function LookupDialog({ item, knownGenres, onApply, onClose }: Props): Re
                   type="button"
                   onClick={() => void apply()}
                   disabled={busy || ticked === 0}
-                  className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-extrabold text-ground disabled:opacity-40"
+                  className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-extrabold text-on-accent disabled:opacity-40"
                 >
                   {ticked === 0 ? 'Nothing ticked' : `Apply ${ticked} ${ticked === 1 ? 'change' : 'changes'}`}
                 </button>

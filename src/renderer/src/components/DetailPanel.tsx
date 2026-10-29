@@ -13,23 +13,13 @@ interface Props {
 }
 
 // The side panel for the selected item. Every change is saved straight away.
-export function DetailPanel({
-  item,
-  vocabulary,
-  onChange,
-  onDelete,
-  onClose
-}: Props): React.JSX.Element {
+export function DetailPanel({ item, vocabulary, onChange, onDelete, onClose }: Props): React.JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState(false)
   return (
     <aside className="flex w-[340px] flex-none flex-col gap-5 overflow-y-auto border-l border-line bg-panel p-6">
       <div className="flex items-center justify-between">
         <span className="text-xs font-extrabold tracking-wide text-muted uppercase">Details</span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="cursor-pointer text-muted hover:text-ink"
-        >
+        <button type="button" onClick={onClose} className="cursor-pointer text-muted hover:text-ink">
           Close
         </button>
       </div>
@@ -43,11 +33,7 @@ export function DetailPanel({
       />
 
       <div className="mt-2 border-t border-line pt-4">
-        <button
-          type="button"
-          onClick={() => setConfirmDelete(true)}
-          className="cursor-pointer text-red-300"
-        >
+        <button type="button" onClick={() => setConfirmDelete(true)} className="cursor-pointer text-danger">
           Delete…
         </button>
       </div>

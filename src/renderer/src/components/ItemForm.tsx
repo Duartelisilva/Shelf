@@ -80,9 +80,9 @@ function CheckedField<T>(props: {
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
         aria-invalid={!!error}
-        className={`${input} ${error ? 'border-red-400' : ''}`}
+        className={`${input} ${error ? 'border-danger' : ''}`}
       />
-      {error && <span className="text-xs text-red-300">{error}</span>}
+      {error && <span className="text-xs text-danger">{error}</span>}
     </label>
   )
 }
@@ -211,7 +211,7 @@ export function ItemForm({ item, vocabulary, onChange, showProblems, idPrefix }:
   return (
     <div className="flex flex-col gap-5">
       {showProblems && problems.length > 0 && (
-        <div className="rounded-lg bg-red-900/40 p-3 text-sm text-red-200">
+        <div className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
           {problems.map((p) => (
             <p key={p}>{p}</p>
           ))}
@@ -257,7 +257,7 @@ export function ItemForm({ item, vocabulary, onChange, showProblems, idPrefix }:
           )}
         </div>
       </div>
-      {imageError && <p className="text-sm text-red-300">{imageError}</p>}
+      {imageError && <p className="text-sm text-danger">{imageError}</p>}
 
       <div className="flex gap-3">
         <TextField key={key('title', item.title)} label="Title" value={item.title} autoFocus={idPrefix === 'add'} onCommit={(v) => text(v) && set({ title: text(v)! })} />
@@ -435,7 +435,7 @@ export function ItemForm({ item, vocabulary, onChange, showProblems, idPrefix }:
             placeholder="dd/mm/yy"
             aria-label="New date"
             aria-invalid={!!dateError}
-            className={`${input} ${dateError ? 'border-red-400' : ''}`}
+            className={`${input} ${dateError ? 'border-danger' : ''}`}
           />
           <button type="button" onClick={addDate} className="cursor-pointer rounded-lg border border-edge px-3 text-accent">
             Add
@@ -445,7 +445,7 @@ export function ItemForm({ item, vocabulary, onChange, showProblems, idPrefix }:
           </button>
         </div>
         {dateError ? (
-          <span className="text-xs text-red-300">{dateError}</span>
+          <span className="text-xs text-danger">{dateError}</span>
         ) : (
           datePreview?.ok && <span className="text-xs text-muted">Will be saved as {formatDate(datePreview.value)}</span>
         )}

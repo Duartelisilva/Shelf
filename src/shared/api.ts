@@ -1,6 +1,7 @@
 // The contract between the app window (renderer) and the background process
 // (main). The renderer never touches files directly: it can only call these.
 
+import type { ThemeChoice } from './themes'
 import type { Library, MediaType } from './types'
 import type { SagaKind } from './importV1'
 
@@ -23,7 +24,9 @@ export const CHANNELS = {
   settingsTestTmdbKey: 'settings:testTmdbKey',
   metadataSearch: 'metadata:search',
   metadataDetails: 'metadata:details',
-  metadataPoster: 'metadata:poster'
+  metadataPoster: 'metadata:poster',
+  preferencesGet: 'preferences:get',
+  preferencesSetTheme: 'preferences:setTheme'
 } as const
 
 export interface LoadResult {
@@ -104,6 +107,11 @@ export interface SettingsStatus {
 
 export type KeyCheck = { ok: true } | { ok: false; error: string }
 
+// Settings that are not secret
+export interface Preferences {
+  theme: ThemeChoice
+}
+
 // Optional lookup of posters and details (TMDB for movies and series, Open Library for books)
 export type LookupSource = 'tmdb' | 'openlibrary'
 
@@ -162,6 +170,10 @@ export interface ShelfApi {
     saveTmdbKey(key: string): Promise<KeyCheck>
     clearTmdbKey(): Promise<void>
     testTmdbKey(): Promise<KeyCheck>
+  }
+  preferences: {
+    get(): Promise<Preferences>
+    setTheme(theme: ThemeChoice): Promise<void>
   }
   metadata: {
     search(type: MediaType, query: string): Promise<LookupSearch>
