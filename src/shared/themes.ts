@@ -3,11 +3,14 @@
 // the window asks it to save.
 
 export const THEMES = [
+  { id: 'daylight', name: 'Daylight', scheme: 'light' },
+  { id: 'paper', name: 'Paper', scheme: 'light' },
   { id: 'midnight', name: 'Midnight', scheme: 'dark' },
   { id: 'graphite', name: 'Graphite', scheme: 'dark' },
   { id: 'forest', name: 'Forest', scheme: 'dark' },
-  { id: 'daylight', name: 'Daylight', scheme: 'light' },
-  { id: 'paper', name: 'Paper', scheme: 'light' }
+  { id: 'crimson', name: 'Crimson', scheme: 'dark' },
+  { id: 'ember', name: 'Ember', scheme: 'dark' },
+  { id: 'violet', name: 'Violet', scheme: 'dark' }
 ] as const
 
 export type ThemeId = (typeof THEMES)[number]['id']
