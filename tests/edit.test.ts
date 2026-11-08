@@ -1,36 +1,95 @@
 import { describe, expect, it } from 'vitest'
 import {
-  blankItem, bulkGenre, cleanGenre, nextEpisode, nextSeason, startingItem, startWatching, isDuplicate, removeItem, todayISO,
-  withDate, withGenre, withStatus, withType, withoutDate, withoutGenre
+  blankItem,
+  bulkGenre,
+  cleanGenre,
+  nextEpisode,
+  nextSeason,
+  startingItem,
+  startWatching,
+  findDuplicate,
+  removeItem,
+  todayISO,
+  withDate,
+  withGenre,
+  withStatus,
+  withType,
+  withoutDate,
+  withoutGenre
 } from '../src/renderer/src/lib/edit'
 import type { MediaItem } from '../src/shared/types'
 
 const item = (over: Partial<MediaItem> & { id: string }): MediaItem => ({
-  type: 'movie', status: 'finished', title: over.id, genres: [], dates: [], isFavorite: false,
-  createdAt: '2026-01-01T00:00:00.000Z', ...over
+  type: 'movie',
+  status: 'finished',
+  title: over.id,
+  genres: [],
+  dates: [],
+  isFavorite: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  ...over
 })
 
 describe('creating items', () => {
   it('starts as a seen movie dated today, with nothing else filled in', () => {
     expect(blankItem('a', 'now', '2026-10-25')).toEqual({
-      id: 'a', type: 'movie', status: 'finished', title: '', genres: [], dates: ['2026-10-25'],
-      isFavorite: false, createdAt: 'now'
+      id: 'a',
+      type: 'movie',
+      status: 'finished',
+      title: '',
+      genres: [],
+      dates: ['2026-10-25'],
+      isFavorite: false,
+      createdAt: 'now'
     })
   })
 
   it('drops fields that belong to another type when the type changes', () => {
     const series = item({ id: 's', type: 'series', yearEnd: 2020, seasons: 3 })
-    expect(withType(series, 'movie')).toEqual({ ...series, type: 'movie', yearEnd: undefined, seasons: undefined })
-    const book = withType(item({ id: 'b', author: 'Herbert', franchise: 'Dune', franchiseOrder: 1 }), 'series')
+    expect(withType(series, 'movie')).toEqual({
+      ...series,
+      type: 'movie',
+      yearEnd: undefined,
+      seasons: undefined
+    })
+    const book = withType(
+      item({ id: 'b', author: 'Herbert', franchise: 'Dune', franchiseOrder: 1 }),
+      'series'
+    )
     expect(book.author).toBeUndefined()
-    expect(book.franchise).toBeUndefined()
+    // a series can have a franchise too, so it is kept
+    expect(book).toMatchObject({ franchise: 'Dune', franchiseOrder: 1 })
   })
 
-  it('spots duplicates by type, title and year, ignoring case and extra spaces', () => {
-    const items = [item({ id: 'x', title: 'Heat', year: 1995 })]
-    expect(isDuplicate(items, { type: 'movie', title: ' heat ', year: 1995 })).toBe(true)
-    expect(isDuplicate(items, { type: 'movie', title: 'Heat', year: 2020 })).toBe(false)
-    expect(isDuplicate(items, { type: 'series', title: 'Heat', year: 1995 })).toBe(false)
+  it('finds an existing item with the same type, title, year and franchise, ignoring case and spaces', () => {
+    const items = [
+      item({ id: 'x', title: 'Heat', year: 1995 }),
+      item({ id: 'y', type: 'series', title: 'Dark', year: 2017, franchise: 'Dark' })
+    ]
+    expect(findDuplicate(items, { type: 'movie', title: ' heat ', year: 1995 })?.id).toBe('x')
+    expect(findDuplicate(items, { type: 'movie', title: 'Heat', year: 2020 })).toBeUndefined()
+    expect(findDuplicate(items, { type: 'series', title: 'Heat', year: 1995 })).toBeUndefined()
+  })
+
+  it('lets two series with the same name and year exist when their franchise differs', () => {
+    const items = [item({ id: 'a', type: 'series', title: 'Dark', year: 2017, franchise: 'Dark' })]
+    expect(
+      findDuplicate(items, { type: 'series', title: 'Dark', year: 2017, franchise: 'Other Dark' })
+    ).toBeUndefined()
+    expect(
+      findDuplicate(items, { type: 'series', title: 'dark', year: 2017, franchise: ' DARK ' })?.id
+    ).toBe('a')
+    expect(findDuplicate(items, { type: 'series', title: 'Dark', year: 2017 })).toBeUndefined() // no franchise is not the same as Dark
+  })
+
+  it('does not count the item being edited as a duplicate of itself', () => {
+    const items = [
+      item({ id: 'a', title: 'Heat', year: 1995 }),
+      item({ id: 'b', title: 'Heat', year: 2000 })
+    ]
+    expect(findDuplicate(items, { type: 'movie', title: 'Heat', year: 1995 }, 'a')).toBeUndefined()
+    // editing b's year to 1995 would clash with a
+    expect(findDuplicate(items, { type: 'movie', title: 'Heat', year: 1995 }, 'b')?.id).toBe('a')
   })
 })
 
@@ -82,7 +141,6 @@ describe('lists', () => {
     expect(removeItem(items, 'a').map((i) => i.id)).toEqual(['b'])
     expect(items).toHaveLength(2)
   })
-
 })
 
 describe('startingItem', () => {
@@ -98,13 +156,19 @@ describe('startingItem', () => {
 
   it('starts a seen movie everywhere else', () => {
     for (const section of ['library', 'movie'] as const) {
-      expect(start(section)).toMatchObject({ type: 'movie', status: 'finished', dates: ['2026-10-25'], isFavorite: false })
+      expect(start(section)).toMatchObject({
+        type: 'movie',
+        status: 'finished',
+        dates: ['2026-10-25'],
+        isFavorite: false
+      })
     }
   })
 })
 
 describe('series progress', () => {
-  const series = (over: Partial<MediaItem> = {}): MediaItem => item({ id: 's', type: 'series', status: 'in-progress', ...over })
+  const series = (over: Partial<MediaItem> = {}): MediaItem =>
+    item({ id: 's', type: 'series', status: 'in-progress', ...over })
 
   it('starts at season 1 episode 1, and a wishlist series becomes in progress', () => {
     const started = startWatching(series({ status: 'wishlist' }))
@@ -121,17 +185,25 @@ describe('series progress', () => {
   it('does not go past the last season when the number of seasons is known', () => {
     const last = series({ seasons: 3, progress: { season: 3, episode: 8 } })
     expect(nextSeason(last)).toBe(last)
-    expect(nextSeason(series({ seasons: 3, progress: { season: 2, episode: 8 } })).progress).toEqual({ season: 3, episode: 1 })
+    expect(
+      nextSeason(series({ seasons: 3, progress: { season: 2, episode: 8 } })).progress
+    ).toEqual({ season: 3, episode: 1 })
   })
 
   it('clears the progress when the series is finished or goes back to the wishlist', () => {
     const watching = series({ progress: { season: 2, episode: 5 } })
     expect(withStatus(watching, 'finished', '2026-10-26').progress).toBeUndefined()
     expect(withStatus(watching, 'wishlist', '2026-10-26').progress).toBeUndefined()
-    expect(withStatus(watching, 'in-progress', '2026-10-26').progress).toEqual({ season: 2, episode: 5 })
+    expect(withStatus(watching, 'in-progress', '2026-10-26').progress).toEqual({
+      season: 2,
+      episode: 5
+    })
   })
 
   it('starts an in-progress item from the In progress tab', () => {
-    expect(startingItem('in-progress', 'id', 'now', '2026-10-26')).toMatchObject({ status: 'in-progress', dates: [] })
+    expect(startingItem('in-progress', 'id', 'now', '2026-10-26')).toMatchObject({
+      status: 'in-progress',
+      dates: []
+    })
   })
 })

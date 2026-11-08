@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import type { Shelf } from '../lib/library'
 import { addedDate, formatDate, lastDate, posterColor } from '../lib/library'
 import { PosterCard } from './PosterCard'
+import { Button } from './ui'
 
 interface Props {
   shelf: Shelf
@@ -10,48 +10,68 @@ interface Props {
   selectMode: boolean
   checkedIds: ReadonlySet<string>
   showAdded: boolean
+  collapsed: boolean
+  onToggle: () => void
   onPick: (id: string) => void
   onSelectShelf: (ids: string[]) => void
 }
 
+function Chevron({ open }: { open: boolean }): React.JSX.Element {
+  return (
+    <svg
+      className={`h-4 w-4 flex-none text-muted transition-transform ${open ? 'rotate-90' : ''}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  )
+}
+
+// One shelf. Its whole title row is the button that folds it away or opens it again.
 export function ShelfView(props: Props): React.JSX.Element {
-  const { shelf, view, selectedId, selectMode, checkedIds, onPick } = props
-  const [collapsed, setCollapsed] = useState(false)
+  const { shelf, view, selectedId, selectMode, checkedIds, collapsed, onPick } = props
   const accent = shelf.id === 'wishlist' ? '#6b7280' : posterColor(shelf.items[0])
   const count = shelf.items.length
 
   return (
     <section className="flex flex-col gap-3.5">
-      <div className="flex items-center gap-2.5">
-        <span className="h-5 w-1 rounded-sm" style={{ background: accent }} />
-        <h2 className="text-lg font-extrabold">{shelf.title}</h2>
-        {shelf.tag && (
-          <span className="rounded-full border border-edge px-2 py-0.5 text-xs text-muted">
-            {shelf.tag}
-          </span>
-        )}
-        <span className="text-muted">{count === 1 ? '1 item' : `${count} items`}</span>
-        <div className="flex-1" />
-        {selectMode && (
+      <div className="flex items-center gap-3">
+        <h2 className="min-w-0 flex-1">
           <button
             type="button"
-            onClick={() => props.onSelectShelf(shelf.items.map((i) => i.id))}
-            className="cursor-pointer text-accent"
+            onClick={props.onToggle}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Click to open this shelf' : 'Click to fold this shelf away'}
+            className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-surface"
           >
-            Select this shelf
+            <Chevron open={!collapsed} />
+            <span className="h-5 w-1 flex-none rounded-sm" style={{ background: accent }} />
+            <span className="truncate text-lg font-extrabold">{shelf.title}</span>
+            {shelf.tag && (
+              <span className="flex-none rounded-full border border-edge px-2 py-0.5 text-xs font-normal text-muted">
+                {shelf.tag}
+              </span>
+            )}
+            <span className="flex-none text-sm font-normal text-muted">
+              {count === 1 ? '1 item' : `${count} items`}
+            </span>
           </button>
+        </h2>
+        {selectMode && (
+          <Button size="sm" onClick={() => props.onSelectShelf(shelf.items.map((i) => i.id))}>
+            Select this shelf
+          </Button>
         )}
-        <button
-          type="button"
-          onClick={() => setCollapsed(!collapsed)}
-          className="cursor-pointer text-muted hover:text-ink"
-        >
-          {collapsed ? 'Expand' : 'Collapse'}
-        </button>
       </div>
 
       {!collapsed && view === 'grid' && (
-        <div className="flex flex-wrap gap-5">
+        <div className="flex flex-wrap gap-5 px-2">
           {shelf.items.map((item) => (
             <PosterCard
               key={item.id}
@@ -67,7 +87,7 @@ export function ShelfView(props: Props): React.JSX.Element {
       )}
 
       {!collapsed && view === 'list' && (
-        <div className="flex flex-col">
+        <div className="flex flex-col px-2">
           {shelf.items.map((item) => {
             const seen = lastDate(item)
             const on = selectMode ? checkedIds.has(item.id) : item.id === selectedId

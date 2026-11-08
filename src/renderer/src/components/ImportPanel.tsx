@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import type { ImportSummary, V1Scan } from '../../../shared/api'
-import type { SagaKind } from '../../../shared/importV1'
 import type { Library } from '../../../shared/types'
+import { buttonClass } from '../lib/uiStyles'
 
 interface Props {
   onImported: (library: Library) => void
 }
 
-// First-time setup only: bring in the files of the old MediaTracker. Once your
-// data is in Shelf, export and import (above) are what you use.
+// First-time setup only: bring in the files of the old MediaTracker. Genres and
+// collections are not imported (V1 mixed them in one field); fill them in
+// afterwards with "Look up online". Once your data is in Shelf, export and
+// import (above) are what you use.
 export function ImportPanel({ onImported }: Props): React.JSX.Element {
   const [scan, setScan] = useState<V1Scan | null>(null)
-  const [kinds, setKinds] = useState<Record<string, SagaKind>>({})
   const [summary, setSummary] = useState<ImportSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,10 +21,7 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
     setSummary(null)
     try {
       const result = await window.api.importV1.pickFolder()
-      if (result) {
-        setScan(result)
-        setKinds({})
-      }
+      if (result) setScan(result)
     } catch (e) {
       setError(String(e))
     }
@@ -32,7 +30,7 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
   const runImport = async (): Promise<void> => {
     setError(null)
     try {
-      const result = await window.api.importV1.commit(kinds)
+      const result = await window.api.importV1.commit()
       setSummary(result)
       onImported(result.library)
       setScan(null)
@@ -41,16 +39,18 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
     }
   }
 
-  const sagaValues = scan ? Object.entries(scan.sagaCounts).sort((a, b) => b[1] - a[1]) : []
-  const primary = 'cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-on-accent disabled:opacity-40'
+  const primary = buttonClass('primary')
 
   return (
     <details className="rounded-xl border border-line bg-surface p-5">
-      <summary className="cursor-pointer text-base font-extrabold">First-time setup: import from MediaTracker V1</summary>
+      <summary className="cursor-pointer text-base font-extrabold">
+        First-time setup: import from MediaTracker V1
+      </summary>
       <div className="mt-4 flex flex-col gap-4">
         <p className="text-muted">
           Pick the folder that holds your old files (movies.json, seriess.json, bookss.json,
-          wishlists.json). Items already in Shelf are skipped.
+          wishlists.json). Items already in Shelf are skipped. Genres and collections are not
+          imported: add them afterwards with Look up online.
         </p>
         {error && <p className="rounded-lg bg-danger-soft p-3 text-danger">{error}</p>}
         <div>
@@ -63,7 +63,9 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
           <div className="flex flex-col gap-2 rounded-lg border border-line p-4">
             <p>
               Found: {scan.found.length ? scan.found.join(', ') : 'nothing'}
-              {scan.missing.length > 0 && <span className="text-muted"> · not found: {scan.missing.join(', ')}</span>}
+              {scan.missing.length > 0 && (
+                <span className="text-muted"> · not found: {scan.missing.join(', ')}</span>
+              )}
             </p>
             {scan.problems.map((p) => (
               <p key={p} className="text-danger">
@@ -71,40 +73,21 @@ export function ImportPanel({ onImported }: Props): React.JSX.Element {
               </p>
             ))}
             <p className="text-muted">
-              {scan.counts.movies} movies, {scan.counts.series} series, {scan.counts.books} books, {scan.counts.wishlist} on the wishlist
+              {scan.counts.movies} movies, {scan.counts.series} series, {scan.counts.books} books,{' '}
+              {scan.counts.wishlist} on the wishlist
             </p>
-
-            {sagaValues.length > 0 && (
-              <>
-                <h3 className="mt-3 font-bold">What are these old &quot;Saga&quot; values?</h3>
-                <p className="text-sm text-muted">Genres describe what a movie is (Horror). Collections group films (Marvel).</p>
-                <div className="mt-1 grid max-w-md grid-cols-[1fr_auto] gap-x-4 gap-y-2">
-                  {sagaValues.map(([value, count]) => (
-                    <label key={value} className="contents">
-                      <span>
-                        {value} <span className="text-muted">({count})</span>
-                      </span>
-                      <select
-                        value={kinds[value] ?? 'genre'}
-                        onChange={(e) => setKinds({ ...kinds, [value]: e.target.value as SagaKind })}
-                        className="rounded-lg border border-edge bg-ground px-2 py-1"
-                      >
-                        <option value="genre">Genre</option>
-                        <option value="collection">Collection</option>
-                      </select>
-                    </label>
-                  ))}
-                </div>
-              </>
-            )}
-
             {scan.warnings.map((w) => (
               <p key={w} className="text-sm text-warn">
                 {w}
               </p>
             ))}
             <div className="mt-2">
-              <button type="button" onClick={runImport} disabled={scan.found.length === 0} className={primary}>
+              <button
+                type="button"
+                onClick={runImport}
+                disabled={scan.found.length === 0}
+                className={primary}
+              >
                 Import
               </button>
             </div>

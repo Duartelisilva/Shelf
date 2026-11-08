@@ -68,7 +68,9 @@ describe('storage safety', () => {
   it('refuses to save something that is not a library, and keeps the old file', async () => {
     const storage = createStorage(dir)
     await storage.save(library(['Alien']))
-    await expect(storage.save({ version: 1, items: [{ nonsense: true }] } as never)).rejects.toThrow('expected shape')
+    await expect(
+      storage.save({ version: 1, items: [{ nonsense: true }] } as never)
+    ).rejects.toThrow('expected shape')
     await expect(storage.save(null as never)).rejects.toThrow('expected shape')
     expect((await storage.load()).library).toEqual(library(['Alien']))
   })
@@ -88,7 +90,9 @@ describe('storage snapshots', () => {
     await storage.save(library(['Alien']))
     const name = await storage.snapshot('restore')
     expect(name).toContain('before-restore-')
-    expect(JSON.parse(await readFile(join(dir, 'backups', name!), 'utf8'))).toEqual(library(['Alien']))
+    expect(JSON.parse(await readFile(join(dir, 'backups', name!), 'utf8'))).toEqual(
+      library(['Alien'])
+    )
   })
 
   it('keeps only the newest 5 safety copies per reason', async () => {
@@ -96,7 +100,9 @@ describe('storage snapshots', () => {
     const storage = createStorage(dir, { now: () => new Date(2026, 0, 1, 0, 0, ++tick) })
     await storage.save(library(['Alien']))
     for (let i = 0; i < 7; i++) await storage.snapshot('import')
-    const copies = (await readdir(join(dir, 'backups'))).filter((n) => n.startsWith('before-import-'))
+    const copies = (await readdir(join(dir, 'backups'))).filter((n) =>
+      n.startsWith('before-import-')
+    )
     expect(copies).toHaveLength(5)
   })
 

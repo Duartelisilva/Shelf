@@ -2,6 +2,8 @@
 // list) and never modifies its input, which is what makes undo possible: the
 // app just keeps the previous list.
 
+import { itemKey } from '../../../shared/identity'
+import type { IdentityFields } from '../../../shared/identity'
 import type { MediaItem, MediaType, Status } from '../../../shared/types'
 import type { Section } from './library'
 
@@ -19,20 +21,30 @@ export function cleanGenre(input: string, known: string[] = []): string {
   return known.find((k) => k.toLowerCase() === text.toLowerCase()) ?? text
 }
 
-export function isDuplicate(
+// The item that already has this type, title, year and franchise, if there is one.
+// While editing an item, ignoreId leaves that item itself out of the comparison.
+export function findDuplicate(
   items: MediaItem[],
-  candidate: { type: MediaType; title: string; year?: number }
-): boolean {
-  const key = (type: string, title: string, year?: number): string =>
-    `${type}|${clean(title).toLowerCase()}|${year ?? ''}`
-  const wanted = key(candidate.type, candidate.title, candidate.year)
-  return items.some((i) => key(i.type, i.title, i.year) === wanted)
+  candidate: IdentityFields,
+  ignoreId?: string
+): MediaItem | undefined {
+  const wanted = itemKey(candidate)
+  return items.find((i) => i.id !== ignoreId && itemKey(i) === wanted)
 }
 
 // What the Add dialog starts with: a movie you have seen, dated today. The date
 // can be removed when it was really long ago, and the status switched to wishlist.
 export function blankItem(id: string, now: string, today: string): MediaItem {
-  return { id, type: 'movie', status: 'finished', title: '', genres: [], dates: [today], isFavorite: false, createdAt: now }
+  return {
+    id,
+    type: 'movie',
+    status: 'finished',
+    title: '',
+    genres: [],
+    dates: [today],
+    isFavorite: false,
+    createdAt: now
+  }
 }
 
 // Adding from the Series tab starts a series, from Books a book, from Wishlist a
@@ -60,10 +72,6 @@ export function withType(item: MediaItem, type: MediaType): MediaItem {
   if (type !== 'series') {
     delete next.yearEnd
     delete next.seasons
-  }
-  if (type === 'series') {
-    delete next.franchise
-    delete next.franchiseOrder
   }
   if (type !== 'book') delete next.author
   return next

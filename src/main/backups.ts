@@ -8,7 +8,8 @@ import type { Library } from '../shared/types'
 import { isWellFormed } from './storage'
 
 const DAILY = /^library-(\d{4}-\d{2}-\d{2})\.json$/
-const SAFETY = /^before-(restore|import)-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z\.json$/
+const SAFETY =
+  /^before-(restore|import)-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z\.json$/
 
 const parse = (text: string): unknown => JSON.parse(text.replace(/^\uFEFF/, ''))
 
@@ -31,7 +32,9 @@ export async function listBackups(dir: string): Promise<BackupInfo[]> {
       backups.push({
         name,
         kind: daily ? 'daily' : (safety![1] as 'restore' | 'import'),
-        date: daily ? daily[1] : `${safety![2]}T${safety![3]}:${safety![4]}:${safety![5]}.${safety![6]}Z`,
+        date: daily
+          ? daily[1]
+          : `${safety![2]}T${safety![3]}:${safety![4]}:${safety![5]}.${safety![6]}Z`,
         items: library.items.length,
         bytes: info.size
       })

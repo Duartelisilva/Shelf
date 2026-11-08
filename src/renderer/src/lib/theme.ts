@@ -11,7 +11,10 @@ const CACHE_KEY = 'shelf-theme'
 const LIGHT_QUERY = '(prefers-color-scheme: light)'
 
 export function applyTheme(choice: ThemeChoice): void {
-  document.documentElement.dataset.theme = resolveTheme(choice, window.matchMedia(LIGHT_QUERY).matches)
+  document.documentElement.dataset.theme = resolveTheme(
+    choice,
+    window.matchMedia(LIGHT_QUERY).matches
+  )
   try {
     localStorage.setItem(CACHE_KEY, choice)
   } catch {

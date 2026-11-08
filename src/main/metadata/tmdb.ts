@@ -17,22 +17,33 @@ export function tmdbImageUrl(path: unknown, size: 'w92' | 'w500'): string | null
 
 // TMDB gives out two kinds of credential: a short "API Key" (sent as a query
 // parameter) and a long "API Read Access Token" (a JWT, sent as a Bearer header).
-export function tmdbRequest(key: string, path: string): { url: string; headers: Record<string, string> } {
+export function tmdbRequest(
+  key: string,
+  path: string
+): { url: string; headers: Record<string, string> } {
   const base = `https://api.themoviedb.org/3${path}`
   const headers: Record<string, string> = { accept: 'application/json' }
   if (key.startsWith('eyJ')) {
     headers.Authorization = `Bearer ${key}`
     return { url: base, headers }
   }
-  return { url: `${base}${base.includes('?') ? '&' : '?'}api_key=${encodeURIComponent(key)}`, headers }
+  return {
+    url: `${base}${base.includes('?') ? '&' : '?'}api_key=${encodeURIComponent(key)}`,
+    headers
+  }
 }
 
-async function tmdbGet(key: string, path: string, fetchFn: typeof fetch): Promise<TmdbResult<unknown>> {
+async function tmdbGet(
+  key: string,
+  path: string,
+  fetchFn: typeof fetch
+): Promise<TmdbResult<unknown>> {
   const { url, headers } = tmdbRequest(key, path)
   try {
     const response = await fetchFn(url, { headers, signal: AbortSignal.timeout(10_000) })
     if (response.ok) return { ok: true, value: await response.json() }
-    if (response.status === 401) return { ok: false, error: 'TMDB did not accept your key. Check it in Settings.' }
+    if (response.status === 401)
+      return { ok: false, error: 'TMDB did not accept your key. Check it in Settings.' }
     return { ok: false, error: `TMDB answered with an error (${response.status}).` }
   } catch {
     return { ok: false, error: 'Could not reach TMDB. Check your internet connection.' }
@@ -56,7 +67,8 @@ const yearOf = (date: unknown): number | undefined => {
   const match = typeof date === 'string' ? /^(\d{4})/.exec(date) : null
   return match ? Number(match[1]) : undefined
 }
-const text = (value: unknown): string | undefined => (typeof value === 'string' && value.trim() ? value.trim() : undefined)
+const text = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() ? value.trim() : undefined
 const shorten = (value: string | undefined, max = 220): string | undefined =>
   value && value.length > max ? `${value.slice(0, max - 1).trimEnd()}…` : value
 
@@ -71,7 +83,11 @@ export async function searchTmdb(
   query: string,
   fetchFn: typeof fetch = fetch
 ): Promise<TmdbResult<TmdbMatch[]>> {
-  const result = await tmdbGet(key, `/search/${kind}?query=${encodeURIComponent(query)}&include_adult=false&language=en-US&page=1`, fetchFn)
+  const result = await tmdbGet(
+    key,
+    `/search/${kind}?query=${encodeURIComponent(query)}&include_adult=false&language=en-US&page=1`,
+    fetchFn
+  )
   if (!result.ok) return result
   const list = (result.value as { results?: unknown })?.results
   const matches: TmdbMatch[] = []
@@ -129,7 +145,8 @@ export async function getTmdbDetails(
     if (collection) details.franchise = collection.replace(/\s+Collection$/i, '')
   } else {
     details.year = yearOf(r.first_air_date)
-    if (typeof r.number_of_seasons === 'number' && r.number_of_seasons >= 1) details.seasons = r.number_of_seasons
+    if (typeof r.number_of_seasons === 'number' && r.number_of_seasons >= 1)
+      details.seasons = r.number_of_seasons
     // An end year only makes sense once the series has ended.
     if (r.status === 'Ended' || r.status === 'Canceled') details.yearEnd = yearOf(r.last_air_date)
   }

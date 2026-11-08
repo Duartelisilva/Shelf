@@ -4,6 +4,8 @@
 import type { LookupCandidate, LookupProposal } from '../../shared/api'
 import type { TmdbResult } from './tmdb'
 
+const SEARCH_TIMEOUT_MS = 20_000
+
 export const OPEN_LIBRARY_USER_AGENT = 'Shelf (https://github.com/Duartelisilva/Shelf)'
 
 export interface BookMatch {
@@ -15,9 +17,14 @@ export interface BookMatch {
 
 const WORK_KEY = /^\/works\/(OL\d+W)$/
 const coverUrl = (id: unknown, size: 'S' | 'L'): string | null =>
-  typeof id === 'number' && Number.isInteger(id) && id > 0 ? `https://covers.openlibrary.org/b/id/${id}-${size}.jpg` : null
+  typeof id === 'number' && Number.isInteger(id) && id > 0
+    ? `https://covers.openlibrary.org/b/id/${id}-${size}.jpg`
+    : null
 
-export async function searchOpenLibrary(query: string, fetchFn: typeof fetch = fetch): Promise<TmdbResult<BookMatch[]>> {
+export async function searchOpenLibrary(
+  query: string,
+  fetchFn: typeof fetch = fetch
+): Promise<TmdbResult<BookMatch[]>> {
   const url =
     'https://openlibrary.org/search.json?limit=8&fields=key,title,author_name,first_publish_year,cover_i&q=' +
     encodeURIComponent(query)
@@ -25,11 +32,20 @@ export async function searchOpenLibrary(query: string, fetchFn: typeof fetch = f
   try {
     const response = await fetchFn(url, {
       headers: { accept: 'application/json', 'User-Agent': OPEN_LIBRARY_USER_AGENT },
-      signal: AbortSignal.timeout(10_000)
+      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS)
     })
-    if (!response.ok) return { ok: false, error: `Open Library answered with an error (${response.status}).` }
+    if (!response.ok)
+      return { ok: false, error: `Open Library answered with an error (${response.status}).` }
     json = await response.json()
-  } catch {
+  } catch (error) {
+    // Open Library's search is free but can be slow, so a timeout is not the same as being offline.
+    if ((error as { name?: string })?.name === 'TimeoutError') {
+      return {
+        ok: false,
+        error:
+          'Open Library did not answer in time. It is sometimes slow: press Search to try again.'
+      }
+    }
     return { ok: false, error: 'Could not reach Open Library. Check your internet connection.' }
   }
 
@@ -40,10 +56,18 @@ export async function searchOpenLibrary(query: string, fetchFn: typeof fetch = f
     const id = typeof d.key === 'string' ? WORK_KEY.exec(d.key)?.[1] : undefined
     const title = typeof d.title === 'string' && d.title.trim() ? d.title.trim() : undefined
     if (!id || !title) continue
-    const authors = Array.isArray(d.author_name) ? d.author_name.filter((a): a is string => typeof a === 'string') : []
+    const authors = Array.isArray(d.author_name)
+      ? d.author_name.filter((a): a is string => typeof a === 'string')
+      : []
     const year = typeof d.first_publish_year === 'number' ? d.first_publish_year : undefined
     matches.push({
-      candidate: { id, source: 'openlibrary', title, year, subtitle: authors.slice(0, 2).join(', ') || undefined },
+      candidate: {
+        id,
+        source: 'openlibrary',
+        title,
+        year,
+        subtitle: authors.slice(0, 2).join(', ') || undefined
+      },
       proposal: {
         source: 'openlibrary',
         externalId: id,

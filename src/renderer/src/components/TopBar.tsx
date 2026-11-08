@@ -1,6 +1,7 @@
 import { SORT_LABELS } from '../lib/library'
 import type { GenreFilter, GenreOption, GroupBy, SortBy } from '../lib/library'
 import { MEDIA_TYPES, TYPE_PLURAL } from '../lib/vocab'
+import { Button, Segmented, inputClass, selectClass } from './ui'
 
 interface Props {
   query: string
@@ -22,10 +23,10 @@ interface Props {
   onAdd: () => void
 }
 
-const control = 'rounded-lg border border-edge bg-surface px-3 py-2 text-ink'
-
 // The props are unpacked one by one on purpose: inputRef is a React ref, and the
 // lint rule for refs flags any use of a props object that contains one.
+// Every control is 40px tall. The search box gives way first when the window is
+// narrow, and then the bar wraps onto a second row instead of squeezing buttons.
 export function TopBar({
   query,
   onQuery,
@@ -48,7 +49,7 @@ export function TopBar({
   const typesWithGenres = MEDIA_TYPES.filter((t) => genres.some((g) => g.type === t))
 
   return (
-    <header className="flex h-[72px] flex-none items-center gap-3 border-b border-line px-7">
+    <header className="flex flex-none flex-wrap items-center gap-3 border-b border-line px-7 py-3">
       <input
         ref={inputRef}
         type="text"
@@ -62,29 +63,24 @@ export function TopBar({
         }}
         placeholder="Search title, franchise, author, notes…   Ctrl F"
         aria-label="Search library"
-        className={`w-[320px] ${control}`}
+        className={`${inputClass} min-w-[200px] max-w-[340px] flex-1`}
       />
-      <button
-        type="button"
-        onClick={() => onFavoritesOnly(!favoritesOnly)}
-        aria-pressed={favoritesOnly}
-        className={`cursor-pointer rounded-full border px-3.5 py-2 ${
-          favoritesOnly
-            ? 'border-transparent bg-accent-soft font-bold text-accent'
-            : 'border-edge text-muted'
-        }`}
-      >
+      <Button pressed={favoritesOnly} onClick={() => onFavoritesOnly(!favoritesOnly)}>
         ★ Favorites
-      </button>
+      </Button>
       <select
         value={genre ? `${genre.type}|${genre.name}` : ''}
         onChange={(e) => {
           const value: string = e.target.value
           const cut = value.indexOf('|')
-          onGenre(cut < 0 ? null : { type: value.slice(0, cut) as GenreFilter['type'], name: value.slice(cut + 1) })
+          onGenre(
+            cut < 0
+              ? null
+              : { type: value.slice(0, cut) as GenreFilter['type'], name: value.slice(cut + 1) }
+          )
         }}
         aria-label="Filter by genre"
-        className={control}
+        className={`${selectClass} w-[180px]`}
       >
         <option value="">All genres</option>
         {/* With one type on screen the list is flat; with several, genres stay apart by type. */}
@@ -105,12 +101,12 @@ export function TopBar({
           )
         })}
       </select>
-      <div className="flex-1" />
+      <div className="min-w-0 flex-1" />
       <select
         value={groupBy}
         onChange={(e) => onGroupBy(e.target.value as GroupBy)}
         aria-label="Group by"
-        className={control}
+        className={`${selectClass} w-[176px]`}
       >
         <option value="franchise">Group: Franchise</option>
         <option value="genre">Group: Genre</option>
@@ -121,7 +117,7 @@ export function TopBar({
         value={sortBy}
         onChange={(e) => onSortBy(e.target.value as SortBy)}
         aria-label="Sort by"
-        className={control}
+        className={`${selectClass} w-[204px]`}
       >
         {(Object.keys(SORT_LABELS) as SortBy[]).map((key) => (
           <option key={key} value={key}>
@@ -129,39 +125,25 @@ export function TopBar({
           </option>
         ))}
       </select>
-      <div className="flex overflow-hidden rounded-lg border border-edge">
-        {(['grid', 'list'] as const).map((mode) => (
-          <button
-            key={mode}
-            type="button"
-            onClick={() => onView(mode)}
-            aria-pressed={view === mode}
-            className={`cursor-pointer px-3 py-2 capitalize ${
-              view === mode ? 'bg-accent-soft font-bold text-accent' : 'text-muted'
-            }`}
-          >
-            {mode}
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
+      <Segmented
+        label="View"
+        value={view}
+        onChange={onView}
+        options={[
+          { value: 'grid', label: 'Grid' },
+          { value: 'list', label: 'List' }
+        ]}
+      />
+      <Button
+        pressed={selectMode}
         onClick={() => onSelectMode(!selectMode)}
-        aria-pressed={selectMode}
         title="Pick several items to set or remove a genre on all of them at once"
-        className={`cursor-pointer rounded-lg border px-3 py-2 ${
-          selectMode ? 'border-accent font-bold text-accent' : 'border-edge text-muted'
-        }`}
       >
         Edit several
-      </button>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="cursor-pointer rounded-[10px] bg-accent px-[18px] py-2.5 font-extrabold text-on-accent"
-      >
+      </Button>
+      <Button variant="primary" onClick={onAdd}>
         + Add
-      </button>
+      </Button>
     </header>
   )
 }

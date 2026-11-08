@@ -36,7 +36,9 @@ export function fakeFetch(routes: Route[]): FakeFetch {
       },
       headers: {
         get: (name: string) =>
-          name.toLowerCase() === 'content-type' ? (reply.type ?? (reply.bytes ? 'image/jpeg' : 'application/json')) : null
+          name.toLowerCase() === 'content-type'
+            ? (reply.type ?? (reply.bytes ? 'image/jpeg' : 'application/json'))
+            : null
       }
     } as unknown as Response
   }) as unknown as typeof fetch

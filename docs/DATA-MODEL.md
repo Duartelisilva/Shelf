@@ -8,11 +8,11 @@ V1 had a single `Saga` text field that was used as a genre ("Horror"), while
 actual series of films lived in `Franchise`. That breaks down for films that
 belong to several genres (a horror thriller), so V2 splits the two ideas:
 
-| Idea | Field | Cardinality | Example |
-| --- | --- | --- | --- |
-| Genre | `genres` | many per item | `["Horror", "Thriller"]` |
-| Franchise / series | `franchise` + `franchiseOrder` | one per item | `The Lord of the Rings`, 2 |
-| Collection | `collection` | one per item | `Marvel`, `Keanu Reeves` (groups several franchises or one actor's films) |
+| Idea               | Field                          | Cardinality   | Example                                                                   |
+| ------------------ | ------------------------------ | ------------- | ------------------------------------------------------------------------- |
+| Genre              | `genres`                       | many per item | `["Horror", "Thriller"]`                                                  |
+| Franchise / series | `franchise` + `franchiseOrder` | one per item  | `The Lord of the Rings`, 2                                                |
+| Collection         | `collection`                   | one per item  | `Marvel`, `Keanu Reeves` (groups several franchises or one actor's films) |
 
 In the UI the library can be grouped by franchise, by genre, or not at all. An
 item with two genres shows under both genre shelves but is counted once in the
@@ -20,16 +20,16 @@ totals and stats. Genre filters work on any number of genres.
 
 ## V1 import mapping
 
-| V1 | V2 |
-| --- | --- |
-| `Saga` | `genres` or `collection`, chosen per value in the import preview (V1 mixed both: "Horror" is a genre, "Marvel" is a collection). A collection that repeats the franchise name is dropped |
-| `Franchise` / `FranchiseNumber` | `franchise` / `franchiseOrder` |
-| `BookNumber` | `franchiseOrder` |
-| `WatchDates` | `dates` (finished items) |
-| `Note` / `IsFavorite` / `BaseColor` | `notes` / `isFavorite` / `color` |
-| `YearEnd` / `NumberOfSeasons` | `yearEnd` / `seasons` |
-| `Author` | `author` |
-| Wishlist item | `status: "wishlist"` with its `Type` as `type` |
+| V1                                  | V2                                                                                                                               |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `Saga`                              | not imported (V1 mixed genres and groupings in it). Genres and collections are added afterwards, one by one, with Look up online |
+| `Franchise` / `FranchiseNumber`     | `franchise` / `franchiseOrder`                                                                                                   |
+| `BookNumber`                        | `franchiseOrder`                                                                                                                 |
+| `WatchDates`                        | `dates` (finished items)                                                                                                         |
+| `Note` / `IsFavorite` / `BaseColor` | `notes` / `isFavorite` / `color`                                                                                                 |
+| `YearEnd` / `NumberOfSeasons`       | `yearEnd` / `seasons`                                                                                                            |
+| `Author`                            | `author`                                                                                                                         |
+| Wishlist item                       | `status: "wishlist"` with its `Type` as `type`                                                                                   |
 
 Every V1 library item becomes `finished`, whether or not it has a watch date:
 a movie seen years ago may simply have no date. Wishlist items stay `wishlist`.
@@ -80,7 +80,7 @@ remove the feature.
 ## Series progress
 
 A series being watched can carry `progress: { season, episode }`, the last episode seen.
-It only exists while the status is *in progress* (finishing the series or moving it back
+It only exists while the status is _in progress_ (finishing the series or moving it back
 to the wishlist clears it), the season cannot be higher than `seasons` when that is filled
 in, and the "In progress" tab lists everything being watched or read.
 
@@ -98,8 +98,7 @@ Import reads only those names and never uses a name from the file as a path. It 
 adds the new items (skipping those already there, matched by id and by type, title and
 year) or replaces the library, after keeping a copy of the current one.
 
-`backups/` holds a copy of the library from before the first change of each day (the last
-14) and a copy before every restore or replace (the newest 5 of each). Backups contain the
+`backups/` holds a copy of the library from before the first change of each day (the last 14) and a copy before every restore or replace (the newest 5 of each). Backups contain the
 library only; unused card images are deleted after two weeks, so a restore shortly after
 still finds its images.
 
@@ -117,3 +116,12 @@ The import preview compares the file with your library by item id and lists what
 - **Add and update**: also gives the items that differ the file's version, after keeping a
   safety copy.
 - **Replace all**: your library becomes exactly the file, after keeping a safety copy.
+
+## When two items are the same item
+
+Movies, series and books all have a franchise (and a number in it). Two items are the same
+when their **type, title, year and franchise** match (capitals and extra spaces ignored), so
+two series with the same name and year can both exist when their franchise differs. The rule
+lives in `src/shared/identity.ts` and is used by the Add dialog, by editing an item (changing
+the title, year or franchise to match another item is refused), by the lookup (it never offers
+a year or franchise that would create a twin) and by both importers.

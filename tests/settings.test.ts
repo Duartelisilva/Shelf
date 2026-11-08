@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -49,7 +49,59 @@ describe('settings', () => {
     await store.clearTmdbKey()
     expect(await store.getTmdbKey()).toBeNull()
     await store.saveTmdbKey(KEY)
-    const other = createSettingsStore(dir, { ...box(), decrypt: () => { throw new Error('other account') } })
+    const other = createSettingsStore(dir, {
+      ...box(),
+      decrypt: () => {
+        throw new Error('other account')
+      }
+    })
     expect(await other.getTmdbKey()).toBeNull()
+  })
+})
+
+describe('settings: older and damaged files', () => {
+  const folder = (): Promise<string> => mkdtemp(join(tmpdir(), 'shelf-settings-'))
+
+  it('encrypts a key that was stored as plain text, so it no longer stays readable', async () => {
+    const dir = await folder()
+    await writeFile(join(dir, 'settings.json'), JSON.stringify({ version: 1, tmdbKey: KEY }))
+    const store = createSettingsStore(dir, box())
+    expect(await store.status()).toEqual({ tmdb: { hasKey: true, hint: '8f90' }, encryption: true })
+    expect(await readFile(join(dir, 'settings.json'), 'utf8')).not.toContain(KEY)
+    expect(await createSettingsStore(dir, box()).getTmdbKey()).toBe(KEY)
+  })
+
+  it('reads the older format (encrypted, without the marker) and rewrites it in the current one', async () => {
+    const dir = await folder()
+    await writeFile(
+      join(dir, 'settings.json'),
+      JSON.stringify({ version: 1, tmdbKey: box().encrypt(KEY) })
+    )
+    const store = createSettingsStore(dir, box())
+    expect(await store.getTmdbKey()).toBe(KEY)
+    expect(
+      JSON.parse(await readFile(join(dir, 'settings.json'), 'utf8')).tmdbKey.startsWith('enc1:')
+    ).toBe(true)
+  })
+
+  it('does not save a key when the secure storage hands it back unprotected', async () => {
+    const dir = await folder()
+    const broken: SecretBox = {
+      available: () => true,
+      encrypt: (text) => text,
+      decrypt: (text) => text
+    }
+    const store = createSettingsStore(dir, broken)
+    expect((await store.saveTmdbKey(KEY)).ok).toBe(false)
+    await expect(readFile(join(dir, 'settings.json'), 'utf8')).rejects.toThrow()
+  })
+
+  it('treats a file with something else in the key place as having no key', async () => {
+    const dir = await folder()
+    await writeFile(
+      join(dir, 'settings.json'),
+      JSON.stringify({ version: 1, tmdbKey: 'not a key!' })
+    )
+    expect((await createSettingsStore(dir, box()).status()).tmdb.hasKey).toBe(false)
   })
 })

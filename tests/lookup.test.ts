@@ -11,13 +11,34 @@ const ID = '123e4567-e89b-12d3-a456-426614174000'
 const KEY = 'a1b2c3d4e5f60718293a4b5c6d7e8f90'
 const POSTER = Buffer.from('poster bytes')
 const movieRoutes: Route[] = [
-  { match: '/search/movie', reply: { json: { results: [{ id: 348, title: 'Alien', release_date: '1979-05-25', poster_path: '/alien.jpg' }] } } },
-  { match: '/movie/348', reply: { json: { release_date: '1979-05-25', poster_path: '/alien.jpg', genres: [{ name: 'Horror' }] } } },
+  {
+    match: '/search/movie',
+    reply: {
+      json: {
+        results: [
+          { id: 348, title: 'Alien', release_date: '1979-05-25', poster_path: '/alien.jpg' }
+        ]
+      }
+    }
+  },
+  {
+    match: '/movie/348',
+    reply: {
+      json: { release_date: '1979-05-25', poster_path: '/alien.jpg', genres: [{ name: 'Horror' }] }
+    }
+  },
   { match: 'image.tmdb.org/t/p/w92', reply: { bytes: Buffer.from('thumb') } },
   { match: 'image.tmdb.org/t/p/w500', reply: { bytes: POSTER } }
 ]
 
-async function setup(key: string | null, routes: Route[] = movieRoutes): Promise<{ lookup: ReturnType<typeof createLookup>; images: ReturnType<typeof createImageStore>; calls: { url: string }[] }> {
+async function setup(
+  key: string | null,
+  routes: Route[] = movieRoutes
+): Promise<{
+  lookup: ReturnType<typeof createLookup>
+  images: ReturnType<typeof createImageStore>
+  calls: { url: string }[]
+}> {
   const images = createImageStore(join(await mkdtemp(join(tmpdir(), 'shelf-lookup-')), 'images'))
   const { fetchFn, calls } = fakeFetch(routes)
   return { lookup: createLookup({ getTmdbKey: async () => key, images, fetchFn }), images, calls }
@@ -46,11 +67,17 @@ describe('lookup of movies and series', () => {
     expect(result.candidates[0].thumb).toBeUndefined()
   })
 
-  it('gives details, then stores the poster as the item\'s own image', async () => {
+  it("gives details, then stores the poster as the item's own image", async () => {
     const { lookup, images } = await setup(KEY)
     const details = await lookup.details('movie', 'tmdb', '348')
     if (!details.ok) throw new Error('expected details')
-    expect(details.proposal).toMatchObject({ source: 'tmdb', externalId: '348', year: 1979, genres: ['Horror'], hasPoster: true })
+    expect(details.proposal).toMatchObject({
+      source: 'tmdb',
+      externalId: '348',
+      year: 1979,
+      genres: ['Horror'],
+      hasPoster: true
+    })
 
     const saved = await lookup.downloadPoster(ID, 'tmdb', '348')
     if ('error' in saved) throw new Error(saved.error)
@@ -66,12 +93,18 @@ describe('lookup of movies and series', () => {
   })
 
   it('refuses something that is not an image, and an image that is too large', async () => {
-    const notImage = await setup(KEY, [movieRoutes[1], { match: 'w500', reply: { bytes: Buffer.from('<html>'), type: 'text/html' } }])
+    const notImage = await setup(KEY, [
+      movieRoutes[1],
+      { match: 'w500', reply: { bytes: Buffer.from('<html>'), type: 'text/html' } }
+    ])
     await notImage.lookup.details('movie', 'tmdb', '348')
     const a = await notImage.lookup.downloadPoster(ID, 'tmdb', '348')
     expect('error' in a && a.error).toContain('usable image')
 
-    const huge = await setup(KEY, [movieRoutes[1], { match: 'w500', reply: { bytes: Buffer.alloc(MAX_IMAGE_BYTES + 1) } }])
+    const huge = await setup(KEY, [
+      movieRoutes[1],
+      { match: 'w500', reply: { bytes: Buffer.alloc(MAX_IMAGE_BYTES + 1) } }
+    ])
     await huge.lookup.details('movie', 'tmdb', '348')
     const b = await huge.lookup.downloadPoster(ID, 'tmdb', '348')
     expect('error' in b && b.error).toContain('15 MB')
@@ -80,7 +113,22 @@ describe('lookup of movies and series', () => {
 
 describe('lookup of books', () => {
   const bookRoutes: Route[] = [
-    { match: 'openlibrary.org/search.json', reply: { json: { docs: [{ key: '/works/OL893415W', title: 'Dune', author_name: ['Frank Herbert'], first_publish_year: 1965, cover_i: 12345 }] } } },
+    {
+      match: 'openlibrary.org/search.json',
+      reply: {
+        json: {
+          docs: [
+            {
+              key: '/works/OL893415W',
+              title: 'Dune',
+              author_name: ['Frank Herbert'],
+              first_publish_year: 1965,
+              cover_i: 12345
+            }
+          ]
+        }
+      }
+    },
     { match: '12345-S.jpg', reply: { bytes: Buffer.from('thumb') } },
     { match: '12345-L.jpg', reply: { bytes: POSTER } }
   ]

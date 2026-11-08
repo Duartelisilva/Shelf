@@ -2,16 +2,17 @@
 // and applies the ticked ones. Pure functions; part of the removable lookup
 // feature (see docs/METADATA.md).
 //
-// Nothing here changes an item by itself. By default only gaps are ticked (a
-// missing image, year or genres); anything that would replace something you
-// entered, and franchise suggestions, start unticked.
+// Nothing here changes an item by itself: every row starts ticked, you look at
+// the list and untick what you do not want before applying. A year or franchise
+// that would make the item the same as another one is not offered at all.
 
 import type { LookupProposal } from '../../../shared/api'
 import { isValidYear } from '../../../shared/rules'
 import type { MediaItem } from '../../../shared/types'
 import { withGenre } from './edit'
 
-export type ReviewField = 'poster' | 'year' | 'yearEnd' | 'seasons' | 'genre' | 'franchise' | 'author'
+export type ReviewField =
+  'poster' | 'year' | 'yearEnd' | 'seasons' | 'genre' | 'franchise' | 'author'
 
 export interface ReviewRow {
   id: string
@@ -48,7 +49,12 @@ export function matchGenres(suggested: string[], known: string[]): string[] {
   return out
 }
 
-export function buildReview(item: MediaItem, proposal: LookupProposal, knownGenres: string[]): ReviewRow[] {
+export function buildReview(
+  item: MediaItem,
+  proposal: LookupProposal,
+  knownGenres: string[],
+  wouldClash: (patch: Partial<MediaItem>) => boolean = () => false
+): ReviewRow[] {
   const rows: ReviewRow[] = []
 
   if (proposal.hasPoster) {
@@ -58,10 +64,15 @@ export function buildReview(item: MediaItem, proposal: LookupProposal, knownGenr
       label: 'Poster',
       current: item.image ? 'your current image' : 'no image',
       proposed: proposal.source === 'tmdb' ? 'the TMDB poster' : 'the Open Library cover',
-      checked: !item.image
+      checked: true
     })
   }
-  if (proposal.year !== undefined && isValidYear(proposal.year) && proposal.year !== item.year) {
+  if (
+    proposal.year !== undefined &&
+    isValidYear(proposal.year) &&
+    proposal.year !== item.year &&
+    !wouldClash({ year: proposal.year })
+  ) {
     rows.push({
       id: 'year',
       field: 'year',
@@ -69,34 +80,89 @@ export function buildReview(item: MediaItem, proposal: LookupProposal, knownGenr
       current: item.year === undefined ? 'none' : String(item.year),
       proposed: String(proposal.year),
       value: proposal.year,
-      checked: item.year === undefined
+      checked: true
     })
   }
   if (item.type === 'series') {
     const end = proposal.yearEnd
-    if (end !== undefined && isValidYear(end) && end !== item.yearEnd && (item.year === undefined || end >= item.year)) {
-      rows.push({ id: 'yearEnd', field: 'yearEnd', label: 'Ended', current: item.yearEnd === undefined ? 'none' : String(item.yearEnd), proposed: String(end), value: end, checked: item.yearEnd === undefined })
+    if (
+      end !== undefined &&
+      isValidYear(end) &&
+      end !== item.yearEnd &&
+      (item.year === undefined || end >= item.year)
+    ) {
+      rows.push({
+        id: 'yearEnd',
+        field: 'yearEnd',
+        label: 'Ended',
+        current: item.yearEnd === undefined ? 'none' : String(item.yearEnd),
+        proposed: String(end),
+        value: end,
+        checked: true
+      })
     }
     if (proposal.seasons !== undefined && proposal.seasons !== item.seasons) {
-      rows.push({ id: 'seasons', field: 'seasons', label: 'Seasons', current: item.seasons === undefined ? 'none' : String(item.seasons), proposed: String(proposal.seasons), value: proposal.seasons, checked: item.seasons === undefined })
+      rows.push({
+        id: 'seasons',
+        field: 'seasons',
+        label: 'Seasons',
+        current: item.seasons === undefined ? 'none' : String(item.seasons),
+        proposed: String(proposal.seasons),
+        value: proposal.seasons,
+        checked: true
+      })
     }
   }
   for (const genre of matchGenres(proposal.genres, knownGenres)) {
     if (item.genres.some((g) => g.toLowerCase() === genre.toLowerCase())) continue
-    rows.push({ id: `genre:${genre}`, field: 'genre', label: 'Genre', current: 'add', proposed: genre, value: genre, checked: item.genres.length === 0 })
+    rows.push({
+      id: `genre:${genre}`,
+      field: 'genre',
+      label: 'Genre',
+      current: 'add',
+      proposed: genre,
+      value: genre,
+      checked: true
+    })
   }
-  if (item.type === 'movie' && proposal.franchise && !item.franchise) {
-    rows.push({ id: 'franchise', field: 'franchise', label: 'Franchise', current: 'none', proposed: proposal.franchise, value: proposal.franchise, checked: false })
+  if (
+    item.type === 'movie' &&
+    proposal.franchise &&
+    !item.franchise &&
+    !wouldClash({ franchise: proposal.franchise })
+  ) {
+    rows.push({
+      id: 'franchise',
+      field: 'franchise',
+      label: 'Franchise',
+      current: 'none',
+      proposed: proposal.franchise,
+      value: proposal.franchise,
+      checked: true
+    })
   }
   if (item.type === 'book' && proposal.author && proposal.author !== item.author) {
-    rows.push({ id: 'author', field: 'author', label: 'Author', current: item.author ?? 'none', proposed: proposal.author, value: proposal.author, checked: !item.author })
+    rows.push({
+      id: 'author',
+      field: 'author',
+      label: 'Author',
+      current: item.author ?? 'none',
+      proposed: proposal.author,
+      value: proposal.author,
+      checked: true
+    })
   }
   return rows
 }
 
 // Applies the ticked rows (the poster is saved separately, because it has to be
 // downloaded) and records where the details came from.
-export function applyReview(item: MediaItem, picked: ReviewRow[], proposal: LookupProposal, now: string): MediaItem {
+export function applyReview(
+  item: MediaItem,
+  picked: ReviewRow[],
+  proposal: LookupProposal,
+  now: string
+): MediaItem {
   let next: MediaItem = { ...item }
   for (const row of picked) {
     switch (row.field) {
@@ -122,6 +188,11 @@ export function applyReview(item: MediaItem, picked: ReviewRow[], proposal: Look
         break // downloaded and stored by the dialog
     }
   }
-  next.meta = { source: proposal.source, externalId: proposal.externalId, overview: proposal.overview, approvedAt: now }
+  next.meta = {
+    source: proposal.source,
+    externalId: proposal.externalId,
+    overview: proposal.overview,
+    approvedAt: now
+  }
   return next
 }

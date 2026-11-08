@@ -11,15 +11,19 @@ interface Props {
   onView: (view: 'settings' | 'stats') => void
 }
 
-const GROUPS: Section[][] = [['library', 'movie', 'series', 'book'], ['in-progress', 'wishlist', 'favorites']]
-const row = 'flex w-full cursor-pointer justify-between rounded-lg px-3 py-2.5 text-left'
+const GROUPS: Section[][] = [
+  ['library', 'movie', 'series', 'book'],
+  ['in-progress', 'wishlist', 'favorites']
+]
+const row =
+  'flex h-10 w-full cursor-pointer items-center justify-between rounded-lg px-3 text-left text-sm'
 const active = 'bg-accent-soft font-bold text-accent'
 const idle = 'text-muted hover:text-ink'
 
 export function Sidebar({ view, section, counts, onSection, onView }: Props): React.JSX.Element {
   return (
     <nav className="flex w-[220px] flex-none flex-col gap-1 border-r border-line bg-panel px-3.5 py-6">
-      <div className="px-2.5 pb-5 text-xl font-extrabold">Shelf</div>
+      <div className="px-3 pb-5 text-xl font-extrabold">Shelf</div>
       {GROUPS.map((group, index) => (
         <div key={index} className="flex flex-col gap-1">
           {index > 0 && <div className="mx-2 my-2.5 h-px bg-line" />}
@@ -40,11 +44,12 @@ export function Sidebar({ view, section, counts, onSection, onView }: Props): Re
           })}
         </div>
       ))}
+      <div className="mx-2 my-2.5 h-px bg-line" />
       <button
         type="button"
         onClick={() => onView('stats')}
         aria-current={view === 'stats' ? 'page' : undefined}
-        className={`${row} mt-1 ${view === 'stats' ? active : idle}`}
+        className={`${row} ${view === 'stats' ? active : idle}`}
       >
         <span>Stats</span>
       </button>
@@ -53,11 +58,9 @@ export function Sidebar({ view, section, counts, onSection, onView }: Props): Re
         type="button"
         onClick={() => onView('settings')}
         aria-current={view === 'settings' ? 'page' : undefined}
-        className={`cursor-pointer rounded-lg border px-3 py-2.5 text-left ${
-          view === 'settings' ? 'border-accent text-accent' : 'border-edge text-muted hover:text-ink'
-        }`}
+        className={`${row} ${view === 'settings' ? active : idle}`}
       >
-        Settings
+        <span>Settings</span>
       </button>
     </nav>
   )

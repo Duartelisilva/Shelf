@@ -14,13 +14,32 @@ interface Props {
 
 // The card shows the item's image when it has one. Without an image it is a
 // colored block with the franchise number, or the first letter.
-export function PosterCard({ item, selected, selectMode, checked, showAdded, onPick }: Props): React.JSX.Element {
+export function PosterCard({
+  item,
+  selected,
+  selectMode,
+  checked,
+  showAdded,
+  onPick
+}: Props): React.JSX.Element {
   const wishlist = item.status === 'wishlist'
   const fill = posterColor(item)
   const ink = wishlist && !item.image ? 'var(--color-muted)' : readableOn(fill)
   const seen = lastDate(item)
-  const doing = item.status === 'in-progress' ? (item.type === 'book' ? 'reading' : 'watching') : null
-  const meta = [item.year, showAdded ? `added ${addedDate(item)}` : wishlist ? 'wishlist' : doing ? doing : seen ? `seen ${formatDate(seen)}` : null]
+  const doing =
+    item.status === 'in-progress' ? (item.type === 'book' ? 'reading' : 'watching') : null
+  const meta = [
+    item.year,
+    showAdded
+      ? `added ${addedDate(item)}`
+      : wishlist
+        ? 'wishlist'
+        : doing
+          ? doing
+          : seen
+            ? `seen ${formatDate(seen)}`
+            : null
+  ]
     .filter(Boolean)
     .join(' · ')
 
@@ -76,7 +95,10 @@ export function PosterCard({ item, selected, selectMode, checked, showAdded, onP
           </span>
         )}
         {!item.image && (
-          <span className="relative text-[56px] leading-none font-extrabold opacity-40" style={{ color: ink }}>
+          <span
+            className="relative text-[56px] leading-none font-extrabold opacity-40"
+            style={{ color: ink }}
+          >
             {item.franchiseOrder ?? item.title.charAt(0).toUpperCase()}
           </span>
         )}

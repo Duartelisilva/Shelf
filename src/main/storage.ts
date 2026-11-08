@@ -75,7 +75,9 @@ export function createStorage(dir: string, options: StorageOptions = {}): Storag
   let queue: Promise<void> = Promise.resolve()
   function save(library: Library): Promise<void> {
     if (!isWellFormed(library)) {
-      return Promise.reject(new Error('The library was not saved: it does not have the expected shape.'))
+      return Promise.reject(
+        new Error('The library was not saved: it does not have the expected shape.')
+      )
     }
     const run = queue.then(() => write(library))
     queue = run.catch(() => undefined) // a failed save must not block the next ones

@@ -1,7 +1,11 @@
 // Converts the JSON files written by MediaTracker V1 into Shelf items.
 // Pure functions only (no Electron, no file access), so they are easy to test.
 // Reading the files and showing the preview happens elsewhere.
+//
+// V1's "Saga" field is deliberately not imported. It mixed genres with groupings, and
+// genres and collections are filled in afterwards, one by one, with the lookup.
 
+import { itemKey } from './identity'
 import { itemProblems } from './rules'
 import type { Library, MediaItem, MediaType } from './types'
 
@@ -24,18 +28,11 @@ export interface V1Files {
 export interface ImportResult {
   items: MediaItem[]
   warnings: string[]
-  sagaCounts: Record<string, number> // every V1 "Saga" value and how often it appears
-  genreCounts: Record<string, number> // the genres that resulted, after the mapping
 }
-
-// What a V1 "Saga" value really was. V1 used the one field for genres
-// ("Horror") and for groupings ("Marvel"), so the user decides per value.
-export type SagaKind = 'genre' | 'collection'
 
 export interface ImportOptions {
   now?: string
   newId?: () => string
-  sagaAs?: Record<string, SagaKind> // per Saga value; anything not listed is a genre
 }
 
 type Raw = Record<string, unknown>
@@ -51,11 +48,9 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
   const warnings: string[] = []
   const items: MediaItem[] = []
   const seen = new Set<string>()
-  const sagaCounts: Record<string, number> = {}
-  const sagaAs = options.sagaAs ?? {}
 
   const add = (item: MediaItem, source: string): void => {
-    const key = duplicateKey(item)
+    const key = itemKey(item)
     if (seen.has(key)) {
       warnings.push(`${source}: skipped duplicate "${item.title}"`)
       return
@@ -70,7 +65,7 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
     [files.books, 'book', 'books']
   ] as const) {
     for (const raw of asRecords(list, source, warnings)) {
-      const item = convert(raw, type, null, now, newId(), source, warnings, sagaAs, sagaCounts)
+      const item = convert(raw, type, null, now, newId(), source, warnings)
       if (item) add(item, source)
     }
   }
@@ -81,15 +76,11 @@ export function importV1(files: V1Files, options: ImportOptions = {}): ImportRes
       warnings.push(`wishlist: unknown type for "${text(raw, 'Title') ?? '?'}", skipped`)
       continue
     }
-    const item = convert(raw, type, 'wishlist', now, newId(), 'wishlist', warnings, sagaAs, sagaCounts)
+    const item = convert(raw, type, 'wishlist', now, newId(), 'wishlist', warnings)
     if (item) add(item, 'wishlist')
   }
 
-  const genreCounts: Record<string, number> = {}
-  for (const item of items) {
-    for (const genre of item.genres) genreCounts[genre] = (genreCounts[genre] ?? 0) + 1
-  }
-  return { items, warnings, sagaCounts, genreCounts }
+  return { items, warnings }
 }
 
 // Adds imported items to an existing library, skipping ones already there,
@@ -98,9 +89,9 @@ export function mergeIntoLibrary(
   library: Library,
   imported: MediaItem[]
 ): { library: Library; added: number; skipped: number } {
-  const knownKeys = new Set(library.items.map(duplicateKey))
+  const knownKeys = new Set(library.items.map(itemKey))
   const knownIds = new Set(library.items.map((item) => item.id))
-  const fresh = imported.filter((item) => !knownIds.has(item.id) && !knownKeys.has(duplicateKey(item)))
+  const fresh = imported.filter((item) => !knownIds.has(item.id) && !knownKeys.has(itemKey(item)))
   return {
     library: { ...library, items: [...library.items, ...fresh] },
     added: fresh.length,
@@ -115,9 +106,7 @@ function convert(
   now: string,
   id: string,
   source: string,
-  warnings: string[],
-  sagaAs: Record<string, SagaKind>,
-  sagaCounts: Record<string, number>
+  warnings: string[]
 ): MediaItem | null {
   const title = normalize(text(raw, 'Title'))
   if (!title) {
@@ -126,10 +115,7 @@ function convert(
   }
 
   const dates = watchDates(raw, title, warnings)
-  const saga = normalize(text(raw, 'Saga'))
   const year = num(raw, 'Year')
-  const sagaKind: SagaKind = sagaAs[saga] ?? 'genre'
-  if (saga) sagaCounts[saga] = (sagaCounts[saga] ?? 0) + 1
   const item: MediaItem = {
     id,
     type,
@@ -137,7 +123,7 @@ function convert(
     // a recorded date (something seen years ago may have no date at all).
     status: forcedStatus ?? 'finished',
     title,
-    genres: saga && sagaKind === 'genre' ? [saga] : [],
+    genres: [],
     dates,
     isFavorite: get(raw, 'IsFavorite') === true,
     createdAt: now
@@ -167,10 +153,6 @@ function convert(
   }
   // The item is still imported; the warning tells you what to fix in Shelf.
   for (const problem of itemProblems(item)) warnings.push(`${source}: "${title}": ${problem}`)
-  // A collection that just repeats the franchise name adds nothing.
-  if (saga && sagaKind === 'collection' && saga.toLowerCase() !== (item.franchise ?? '').toLowerCase()) {
-    item.collection = saga
-  }
   return item
 }
 
@@ -234,8 +216,4 @@ function num(raw: Raw, key: string): number | undefined {
 
 function normalize(value: string | undefined): string {
   return (value ?? '').trim().replace(/\s+/g, ' ')
-}
-
-function duplicateKey(item: MediaItem): string {
-  return `${item.type}|${item.title.toLowerCase()}|${item.year ?? ''}`
 }

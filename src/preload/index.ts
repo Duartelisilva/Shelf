@@ -34,11 +34,12 @@ const api: ShelfApi = {
   metadata: {
     search: (type, query) => ipcRenderer.invoke(CHANNELS.metadataSearch, type, query),
     details: (type, source, id) => ipcRenderer.invoke(CHANNELS.metadataDetails, type, source, id),
-    downloadPoster: (itemId, source, id) => ipcRenderer.invoke(CHANNELS.metadataPoster, itemId, source, id)
+    downloadPoster: (itemId, source, id) =>
+      ipcRenderer.invoke(CHANNELS.metadataPoster, itemId, source, id)
   },
   importV1: {
     pickFolder: () => ipcRenderer.invoke(CHANNELS.importPick),
-    commit: (sagaAs) => ipcRenderer.invoke(CHANNELS.importCommit, sagaAs)
+    commit: () => ipcRenderer.invoke(CHANNELS.importCommit)
   }
 }
 

@@ -99,6 +99,8 @@ describe('image store: downloaded images', () => {
     const s = store()
     await expect(s.importBytes(Buffer.from('x'), 'exe', ID)).rejects.toThrow('PNG')
     await expect(s.importBytes(Buffer.from('x'), 'png', '../evil')).rejects.toThrow('Invalid')
-    await expect(s.importBytes(Buffer.alloc(15 * 1024 * 1024 + 1), 'png', ID)).rejects.toThrow('15 MB')
+    await expect(s.importBytes(Buffer.alloc(15 * 1024 * 1024 + 1), 'png', ID)).rejects.toThrow(
+      '15 MB'
+    )
   })
 })

@@ -7,7 +7,12 @@ interface Props {
   onCancel: () => void
 }
 
-export function ConfirmDeleteDialog({ title, year, onConfirm, onCancel }: Props): React.JSX.Element {
+export function ConfirmDeleteDialog({
+  title,
+  year,
+  onConfirm,
+  onCancel
+}: Props): React.JSX.Element {
   return (
     <ConfirmDialog
       title={`Delete “${title}”${year ? ` (${year})` : ''}?`}

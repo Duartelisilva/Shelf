@@ -1,202 +1,33 @@
-import { useMemo, useState } from 'react'
-import type { MediaItem, MediaType } from '../../../shared/types'
-import { imageUrl, posterColor } from '../lib/library'
-import { computeStats } from '../lib/stats'
-import type { Period } from '../lib/stats'
-import { MEDIA_TYPES, TYPE_PLURAL } from '../lib/vocab'
+import { useState } from 'react'
+import type { MediaItem } from '../../../shared/types'
+import { MonthReviewScreen } from './MonthReviewScreen'
+import { OverviewStats } from './OverviewStats'
+import { Segmented } from './ui'
+import { YearReviewScreen } from './YearReviewScreen'
 
-const panel = 'flex min-w-[360px] flex-1 flex-col gap-3.5 rounded-xl border border-line bg-surface p-5'
-const heading = 'text-base font-extrabold'
-const DONE_NAME: Record<MediaType, string> = { movie: 'MOVIES SEEN', series: 'SERIES FINISHED', book: 'BOOKS READ' }
+type Tab = 'overview' | 'year' | 'month'
 
-function Thumb({ item }: { item: MediaItem }): React.JSX.Element {
-  return (
-    <div
-      className="relative h-10 w-7 flex-none overflow-hidden rounded-[5px]"
-      style={{ background: posterColor(item) }}
-    >
-      {item.image && <img src={imageUrl(item.image)} alt="" className="absolute inset-0 h-full w-full object-cover" />}
-    </div>
-  )
-}
-
-function Empty({ children }: { children: string }): React.JSX.Element {
-  return <p className="text-muted">{children}</p>
-}
-
+// Three views of the same data: everything at once, one year, one month.
 export function StatsScreen({ items }: { items: MediaItem[] }): React.JSX.Element {
-  const [period, setPeriod] = useState<Period>('all')
-  // Lists, genres and franchises are shown for one type at a time: they do not mix.
-  const [type, setType] = useState<MediaType>('movie')
-  const currentYear = new Date().getFullYear()
-  const stats = useMemo(() => computeStats(items, period, currentYear, type), [items, period, currentYear, type])
-
-  const total = stats.counts.movie + stats.counts.series + stats.counts.book
-  const tallest = Math.max(1, ...stats.perYear.map((y) => y.count))
-  const top = stats.topRated
-
+  const [tab, setTab] = useState<Tab>('overview')
   return (
     <div className="flex-1 overflow-y-auto p-8">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <h1 className="text-[28px] font-extrabold">Stats</h1>
-        <div className="flex-1" />
-        <div className="flex overflow-hidden rounded-lg border border-edge" role="group" aria-label="Show stats for">
-          {MEDIA_TYPES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setType(t)}
-              aria-pressed={type === t}
-              className={`cursor-pointer px-3 py-2 ${type === t ? 'bg-accent-soft font-bold text-accent' : 'text-muted'}`}
-            >
-              {TYPE_PLURAL[t]}
-            </button>
-          ))}
-        </div>
-        <select
-          value={String(period)}
-          onChange={(e) => setPeriod(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-          aria-label="Period"
-          className="rounded-lg border border-edge bg-surface px-3 py-2"
-        >
-          <option value="all">All time</option>
-          {stats.years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+        <Segmented
+          label="Statistics page"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'overview', label: 'Overview' },
+            { value: 'year', label: 'Year in review' },
+            { value: 'month', label: 'Month' }
+          ]}
+        />
       </div>
-
-      <div className="mt-6 flex flex-wrap gap-4">
-        {(['movie', 'series', 'book'] as const).map((type) => (
-          <div key={type} className="min-w-[160px] flex-1 rounded-xl border border-line bg-surface px-5 py-4">
-            <div className="text-xs font-extrabold text-muted">{DONE_NAME[type]}</div>
-            <div className="mt-1.5 text-[34px] leading-tight font-extrabold">{stats.counts[type]}</div>
-            <div className="text-xs text-muted">{stats.thisYear[type]} in {currentYear}</div>
-          </div>
-        ))}
-        <div className="min-w-[160px] flex-1 rounded-xl border border-line bg-surface px-5 py-4">
-          <div className="text-xs font-extrabold text-muted">AVERAGE RATING · {TYPE_PLURAL[type].toUpperCase()}</div>
-          <div className="mt-1.5 text-[34px] leading-tight font-extrabold">{stats.averageRating ?? '–'}</div>
-          <div className="text-xs text-muted">{stats.ratedCount} rated</div>
-        </div>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-5">
-        <section className={panel}>
-          <div className="flex items-center gap-3">
-            <h2 className={heading}>Top rated · {TYPE_PLURAL[type]}</h2>
-          </div>
-          {top.length === 0 ? (
-            <Empty>No ratings yet. Rate items in the detail panel and they will show up here.</Empty>
-          ) : (
-            top.map((item, index) => (
-              <div key={item.id} className="flex items-center gap-3">
-                <span className="w-4 font-extrabold text-muted">{index + 1}</span>
-                <Thumb item={item} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-bold">{item.title}</div>
-                  <div className="mt-1.5 h-[5px] rounded-sm bg-line">
-                    <div className="h-[5px] rounded-sm bg-accent" style={{ width: `${(item.rating ?? 0) * 10}%` }} />
-                  </div>
-                </div>
-                <span className="font-extrabold">{item.rating}</span>
-              </div>
-            ))
-          )}
-        </section>
-
-        <section className={panel}>
-          <h2 className={heading}>{TYPE_PLURAL[type]} finished per year</h2>
-          {stats.perYear.length === 0 ? (
-            <Empty>No watch or read dates yet.</Empty>
-          ) : (
-            <div className="flex h-[200px] items-end gap-2.5 border-b border-line">
-              {stats.perYear.map((y) => (
-                <div key={y.year} className="flex flex-1 flex-col items-center justify-end gap-1.5">
-                  <span className="text-xs font-bold">{y.count}</span>
-                  <div className="w-full max-w-11 rounded-t-md bg-accent" style={{ height: `${(y.count / tallest) * 140}px`, minHeight: y.count ? 3 : 0 }} />
-                  <span className="text-xs text-muted">{y.year}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {stats.undated > 0 && (
-            <p className="text-xs text-muted">{stats.undated} finished {TYPE_PLURAL[type].toLowerCase()} have no date, so they are not in this chart.</p>
-          )}
-        </section>
-
-        <section className={panel}>
-          <h2 className={heading}>{type === 'book' ? 'Most-read series' : 'Most-followed franchises'}</h2>
-          {stats.franchises.length === 0 ? (
-            <Empty>Groups with at least two finished items appear here.</Empty>
-          ) : (
-            stats.franchises.map((f) => (
-              <div key={f.name} className="flex items-center gap-2.5">
-                <span className="flex-1 truncate font-bold">{f.name}</span>
-                <span className="text-muted">
-                  {f.items} items · {f.watches} {f.watches === 1 ? 'watch' : 'watches'}
-                </span>
-              </div>
-            ))
-          )}
-        </section>
-
-        <section className={panel}>
-          <h2 className={heading}>Top genres · {TYPE_PLURAL[type]}</h2>
-          {stats.genres.length === 0 ? (
-            <Empty>Add genres to your items and they will be counted here.</Empty>
-          ) : (
-            stats.genres.map((g) => (
-              <div key={g.name} className="flex items-center gap-3">
-                <span className="w-28 truncate font-bold">{g.name}</span>
-                <div className="h-[5px] flex-1 rounded-sm bg-line">
-                  <div className="h-[5px] rounded-sm bg-accent" style={{ width: `${(g.count / stats.genres[0].count) * 100}%` }} />
-                </div>
-                <span className="w-8 text-right font-extrabold">{g.count}</span>
-              </div>
-            ))
-          )}
-          <p className="text-xs text-muted">An item with several genres counts once in each of them.</p>
-        </section>
-
-        <section className={panel}>
-          <h2 className={heading}>{type === 'book' ? 'Most reread' : 'Most rewatched'}</h2>
-          {stats.mostRewatched.length === 0 ? (
-            <Empty>Items you saw or read more than once appear here.</Empty>
-          ) : (
-            stats.mostRewatched.map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
-                <Thumb item={item} />
-                <span className="flex-1 truncate font-bold">{item.title}</span>
-                <span className="text-muted">{item.dates.length} times</span>
-              </div>
-            ))
-          )}
-        </section>
-
-        <section className={panel}>
-          <h2 className={heading}>Split by type</h2>
-          {total === 0 ? (
-            <Empty>Nothing finished yet.</Empty>
-          ) : (
-            <>
-              <div className="flex h-3.5 overflow-hidden rounded-[7px]">
-                <div style={{ width: `${(stats.counts.movie / total) * 100}%`, background: 'var(--color-accent)' }} />
-                <div style={{ width: `${(stats.counts.series / total) * 100}%`, background: '#1f9d7f' }} />
-                <div style={{ width: `${(stats.counts.book / total) * 100}%`, background: '#d69a3c' }} />
-              </div>
-              <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
-                <span>Movies {stats.counts.movie}</span>
-                <span>Series {stats.counts.series}</span>
-                <span>Books {stats.counts.book}</span>
-              </div>
-            </>
-          )}
-          <p className="text-xs text-muted">{stats.wishlist} more on the wishlist, not counted above.</p>
-        </section>
-      </div>
+      {tab === 'overview' && <OverviewStats items={items} />}
+      {tab === 'year' && <YearReviewScreen items={items} />}
+      {tab === 'month' && <MonthReviewScreen items={items} />}
     </div>
   )
 }

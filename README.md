@@ -17,7 +17,7 @@ Electron, React and TypeScript for a much better interface.
   collection, series end year and seasons, book author, watch or read dates, notes and a
   card image. Used both to add and to edit
 - **Card images**: the app keeps its own copy, so the original file can be deleted. Or use
-  **Find poster & details…** to look one up (TMDB for movies and series with your own free key,
+  **Look up online…** to look one up (TMDB for movies and series with your own free key,
   Open Library for books): you see the matches, tick what you want, and nothing changes
   until you apply
 - **Genres, franchises and collections are separate for movies, series and books**
@@ -30,8 +30,13 @@ Electron, React and TypeScript for a much better interface.
   **In progress** tab for everything you are watching or reading
 - **Export and import your own library** as one `.shelf` file (library and images), either
   adding to what you have or replacing it, and a **backups list with restore**
-- **First-time setup**: import from MediaTracker V1, with a preview and a choice between
-  genre and collection for each old "saga" value
+- **First-time setup**: import from MediaTracker V1 (genres and collections are not imported;
+  you add them afterwards with Look up online)
+- **Year in review and Month pages** inside Stats: what you saw and read in one year or one
+  month, with ratings, a month-by-month chart and a calendar. They start at your first recorded
+  watch and end with the current period
+- **No accidental duplicates**: two items are the same when title, year and franchise match
+  (movies, series and books all have a franchise), also when you edit one
 - **Your data stays on your computer**: one JSON file, saved safely, with a daily backup
 - **Settings** for the colour theme (five themes, or match Windows light and dark) and the
   optional TMDB key, stored encrypted by Windows
@@ -48,12 +53,12 @@ The app is not code-signed, so Windows SmartScreen may warn the first time: choo
 
 In `%APPDATA%\Shelf`:
 
-| Path | What it is |
-| --- | --- |
-| `library.json` | everything you entered |
-| `images\` | the card images (one per item) |
-| `backups\` | the library from before the first change of each day (last 14), and before every restore or replace |
-| `settings.json` | your TMDB key, encrypted for your Windows account |
+| Path            | What it is                                                                                          |
+| --------------- | --------------------------------------------------------------------------------------------------- |
+| `library.json`  | everything you entered                                                                              |
+| `images\`       | the card images (one per item)                                                                      |
+| `backups\`      | the library from before the first change of each day (last 14), and before every restore or replace |
+| `settings.json` | your TMDB key, encrypted for your Windows account                                                   |
 
 To move Shelf to another computer, use **Settings, Export library** and then **Import from a file**
 there: that carries the images too. (The key does not travel; paste it again.)

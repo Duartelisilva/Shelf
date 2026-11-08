@@ -46,7 +46,9 @@ export function AppearanceSection({ theme, onTheme }: Props): React.JSX.Element 
             onClick={() => onTheme(choice.id)}
             aria-pressed={theme === choice.id}
             className={`flex cursor-pointer flex-col gap-2 rounded-xl border p-2 text-left ${
-              theme === choice.id ? 'border-accent outline-2 outline-accent' : 'border-edge hover:border-muted'
+              theme === choice.id
+                ? 'border-accent outline-2 outline-accent'
+                : 'border-edge hover:border-muted'
             }`}
           >
             {choice.id === 'system' ? (
@@ -57,13 +59,15 @@ export function AppearanceSection({ theme, onTheme }: Props): React.JSX.Element 
             ) : (
               <Swatch id={choice.id} className="overflow-hidden rounded-lg border border-edge" />
             )}
-            <span className={theme === choice.id ? 'font-bold text-accent' : ''}>{choice.name}</span>
+            <span className={theme === choice.id ? 'font-bold text-accent' : ''}>
+              {choice.name}
+            </span>
           </button>
         ))}
       </div>
       <p className="text-sm text-muted">
-        &quot;Match Windows&quot; uses Daylight when Windows is in light mode and Midnight when it is in dark mode, and
-        follows it when it changes.
+        &quot;Match Windows&quot; uses Daylight when Windows is in light mode and Midnight when it
+        is in dark mode, and follows it when it changes.
       </p>
     </section>
   )

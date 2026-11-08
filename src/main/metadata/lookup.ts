@@ -3,7 +3,14 @@
 // search text and an id, and every address is built here from fixed hosts.
 // Part of the removable metadata folder (see docs/METADATA.md).
 
-import type { ImagePick, LookupCandidate, LookupDetails, LookupProposal, LookupSearch, LookupSource } from '../../shared/api'
+import type {
+  ImagePick,
+  LookupCandidate,
+  LookupDetails,
+  LookupProposal,
+  LookupSearch,
+  LookupSource
+} from '../../shared/api'
 import type { MediaType } from '../../shared/types'
 import { MAX_IMAGE_BYTES } from '../imageStore'
 import type { ImageStore } from '../imageStore'
@@ -11,7 +18,11 @@ import { OPEN_LIBRARY_USER_AGENT, searchOpenLibrary } from './openlibrary'
 import { getTmdbDetails, searchTmdb } from './tmdb'
 
 const ALLOWED_IMAGE_HOSTS = ['image.tmdb.org', 'covers.openlibrary.org']
-const EXTENSIONS: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+const EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp'
+}
 const MAX_REMEMBERED = 200
 
 interface Deps {
@@ -23,7 +34,11 @@ interface Deps {
 export interface Lookup {
   search(type: MediaType, query: string): Promise<LookupSearch>
   details(type: MediaType, source: LookupSource, id: string): Promise<LookupDetails>
-  downloadPoster(itemId: string, source: LookupSource, id: string): Promise<Exclude<ImagePick, null>>
+  downloadPoster(
+    itemId: string,
+    source: LookupSource,
+    id: string
+  ): Promise<Exclude<ImagePick, null>>
 }
 
 export function createLookup({ getTmdbKey, images, fetchFn = fetch }: Deps): Lookup {
@@ -37,12 +52,14 @@ export function createLookup({ getTmdbKey, images, fetchFn = fetch }: Deps): Loo
   }
 
   async function fetchImage(url: string): Promise<{ bytes: Buffer; mime: string }> {
-    if (!ALLOWED_IMAGE_HOSTS.includes(new URL(url).hostname)) throw new Error('Unexpected image address.')
+    if (!ALLOWED_IMAGE_HOSTS.includes(new URL(url).hostname))
+      throw new Error('Unexpected image address.')
     const response = await fetchFn(url, {
       headers: { 'User-Agent': OPEN_LIBRARY_USER_AGENT },
       signal: AbortSignal.timeout(15_000)
     })
-    if (!response.ok) throw new Error(`The image server answered with an error (${response.status}).`)
+    if (!response.ok)
+      throw new Error(`The image server answered with an error (${response.status}).`)
     const mime = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
     if (!(mime in EXTENSIONS)) throw new Error('The server did not send a usable image.')
     const bytes = Buffer.from(await response.arrayBuffer())
@@ -50,7 +67,9 @@ export function createLookup({ getTmdbKey, images, fetchFn = fetch }: Deps): Loo
     return { bytes, mime }
   }
 
-  async function withThumbs(items: { candidate: LookupCandidate; thumbUrl: string | null }[]): Promise<LookupCandidate[]> {
+  async function withThumbs(
+    items: { candidate: LookupCandidate; thumbUrl: string | null }[]
+  ): Promise<LookupCandidate[]> {
     return Promise.all(
       items.map(async ({ candidate, thumbUrl }) => {
         if (!thumbUrl) return candidate
@@ -80,7 +99,11 @@ export function createLookup({ getTmdbKey, images, fetchFn = fetch }: Deps): Loo
       }
 
       const key = await getTmdbKey()
-      if (!key) return { ok: false, error: 'Add your TMDB key in Settings (Posters and details) to look up movies and series.' }
+      if (!key)
+        return {
+          ok: false,
+          error: 'Add your TMDB key in Settings (Posters and details) to look up movies and series.'
+        }
       const result = await searchTmdb(key, type === 'movie' ? 'movie' : 'tv', text, fetchFn)
       if (!result.ok) return result
       return { ok: true, candidates: await withThumbs(result.value) }
@@ -89,7 +112,9 @@ export function createLookup({ getTmdbKey, images, fetchFn = fetch }: Deps): Loo
     async details(type, source, id) {
       if (source === 'openlibrary') {
         const proposal = books.get(id)
-        return proposal ? { ok: true, proposal } : { ok: false, error: 'Search again to see this book.' }
+        return proposal
+          ? { ok: true, proposal }
+          : { ok: false, error: 'Search again to see this book.' }
       }
       const key = await getTmdbKey()
       if (!key) return { ok: false, error: 'Add your TMDB key in Settings first.' }

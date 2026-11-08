@@ -9,11 +9,13 @@ const css = readFileSync(join(process.cwd(), 'src/renderer/src/assets/main.css')
 
 function tokens(block: string): Record<string, string> {
   const found: Record<string, string> = {}
-  for (const m of block.matchAll(/--color-([a-z-]+):\s*(#[0-9a-fA-F]{6});/g)) found[m[1]] = m[2].toLowerCase()
+  for (const m of block.matchAll(/--color-([a-z-]+):\s*(#[0-9a-fA-F]{6});/g))
+    found[m[1]] = m[2].toLowerCase()
   return found
 }
 const themes: Record<string, Record<string, string>> = {}
-for (const m of css.matchAll(/\[data-theme='([a-z]+)'\]\s*\{([^}]*)\}/g)) themes[m[1]] = tokens(m[2])
+for (const m of css.matchAll(/\[data-theme='([a-z]+)'\]\s*\{([^}]*)\}/g))
+  themes[m[1]] = tokens(m[2])
 const start = css.indexOf('@theme')
 const defaults = tokens(css.slice(start, css.indexOf('}', start)))
 
@@ -31,7 +33,9 @@ function contrast(a: string, b: string): number {
 // Text colour on the backgrounds it is actually used on.
 const BACKGROUNDS = ['ground', 'panel', 'surface']
 const PAIRS: [string, string][] = [
-  ...['ink', 'muted', 'accent', 'danger', 'warn', 'ok'].flatMap((text) => BACKGROUNDS.map((bg) => [text, bg] as [string, string])),
+  ...['ink', 'muted', 'accent', 'danger', 'warn', 'ok'].flatMap((text) =>
+    BACKGROUNDS.map((bg) => [text, bg] as [string, string])
+  ),
   ['accent', 'accent-soft'],
   ['on-accent', 'accent'],
   ['danger', 'danger-soft'],
@@ -56,7 +60,9 @@ describe('themes in main.css', () => {
       })
 
       it('is readable: every text colour has a contrast of at least 4.5 on its backgrounds', () => {
-        const failing = PAIRS.filter(([text, bg]) => contrast(themes[theme.id][text], themes[theme.id][bg]) < 4.5).map(([text, bg]) => `${text} on ${bg}`)
+        const failing = PAIRS.filter(
+          ([text, bg]) => contrast(themes[theme.id][text], themes[theme.id][bg]) < 4.5
+        ).map(([text, bg]) => `${text} on ${bg}`)
         expect(failing).toEqual([])
       })
     })

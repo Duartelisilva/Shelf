@@ -3,6 +3,8 @@ import type { BackupInfo, ImportMode, ImportPreview } from '../../../shared/api'
 import type { Library } from '../../../shared/types'
 import { formatDate } from '../lib/library'
 import { ConfirmDialog } from './ConfirmDialog'
+import { Segmented } from './ui'
+import { buttonClass } from '../lib/uiStyles'
 
 interface Props {
   onLibraryChanged: (library: Library) => void
@@ -15,11 +17,13 @@ interface Confirm {
   run: () => Promise<void>
 }
 
-const button = 'cursor-pointer rounded-lg border border-edge px-4 py-2 disabled:cursor-not-allowed disabled:opacity-40'
-const primary = 'cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-on-accent disabled:cursor-not-allowed disabled:opacity-40'
+const button = buttonClass('secondary')
+const primary = buttonClass('primary')
 
 const formatBytes = (bytes: number): string =>
-  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+    : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 
 function backupLabel(info: BackupInfo): string {
   if (info.kind === 'daily') return `Daily backup · ${formatDate(info.date)}`
@@ -54,14 +58,19 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
       setMessage({ ok: false, text: e instanceof Error ? e.message : String(e) })
     } finally {
       setBusy(false)
-      window.api.data.listBackups().then(setBackups).catch(() => undefined)
+      window.api.data
+        .listBackups()
+        .then(setBackups)
+        .catch(() => undefined)
     }
   }
 
   const exportNow = (): Promise<void> =>
     run(async () => {
       const result = await window.api.data.exportLibrary()
-      return result ? `Exported ${result.items} items and ${result.images} images to ${result.path}` : null
+      return result
+        ? `Exported ${result.items} items and ${result.images} images to ${result.path}`
+        : null
     })
 
   const choose = (): Promise<void> =>
@@ -100,7 +109,8 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
           }
         : {
             title: 'Replace your library?',
-            message: 'Your library will become exactly what is in this file. A copy of your current library is kept in the backups list below.',
+            message:
+              'Your library will become exactly what is in this file. A copy of your current library is kept in the backups list below.',
             confirmLabel: 'Replace',
             run: () => doImport('replace')
           }
@@ -125,12 +135,17 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
       <h2 className="text-base font-extrabold">Your data</h2>
 
       {message && (
-        <p className={`rounded-lg p-3 ${message.ok ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger'}`}>{message.text}</p>
+        <p
+          className={`rounded-lg p-3 ${message.ok ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger'}`}
+        >
+          {message.text}
+        </p>
       )}
 
       <div className="flex flex-col gap-2">
         <p className="text-muted">
-          An export is one file with your library and all its images. Importing it later (here or on another computer) brings everything back.
+          An export is one file with your library and all its images. Importing it later (here or on
+          another computer) brings everything back.
         </p>
         <div className="flex flex-wrap gap-3">
           <button type="button" onClick={exportNow} disabled={busy} className={primary}>
@@ -139,7 +154,11 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
           <button type="button" onClick={choose} disabled={busy} className={button}>
             Import from a file…
           </button>
-          <button type="button" onClick={() => void window.api.data.openDataFolder()} className={button}>
+          <button
+            type="button"
+            onClick={() => void window.api.data.openDataFolder()}
+            className={button}
+          >
             Open data folder
           </button>
         </div>
@@ -149,22 +168,29 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
         <div className="flex flex-col gap-3 rounded-lg border border-line p-4">
           <p className="font-bold">{preview.file}</p>
           <p className="text-muted">
-            Exported {formatDate(preview.exportedAt.slice(0, 10))} with Shelf {preview.appVersion}: {preview.counts.movies} movies,{' '}
-            {preview.counts.series} series, {preview.counts.books} books, {preview.counts.wishlist} on the wishlist, {preview.images} images.
+            Exported {formatDate(preview.exportedAt.slice(0, 10))} with Shelf {preview.appVersion}:{' '}
+            {preview.counts.movies} movies, {preview.counts.series} series, {preview.counts.books}{' '}
+            books, {preview.counts.wishlist} on the wishlist, {preview.images} images.
           </p>
           <p>
-            <span className="font-bold">{preview.newItems}</span> new, <span className="font-bold">{preview.changed.length}</span> different from yours,{' '}
+            <span className="font-bold">{preview.newItems}</span> new,{' '}
+            <span className="font-bold">{preview.changed.length}</span> different from yours,{' '}
             <span className="font-bold">{preview.alreadyHere}</span> identical.
           </p>
           {preview.changed.length > 0 && (
             <div className="flex flex-col gap-1 text-sm">
-              <p className="text-muted">Different from your library (your version, then the file&apos;s):</p>
+              <p className="text-muted">
+                Different from your library (your version, then the file&apos;s):
+              </p>
               {preview.changed.slice(0, 20).map((c) => (
                 <p key={c.id}>
-                  <span className="font-bold">{c.title}</span> <span className="text-muted">· {c.changes.join(', ')}</span>
+                  <span className="font-bold">{c.title}</span>{' '}
+                  <span className="text-muted">· {c.changes.join(', ')}</span>
                 </p>
               ))}
-              {preview.changed.length > 20 && <p className="text-muted">and {preview.changed.length - 20} more</p>}
+              {preview.changed.length > 20 && (
+                <p className="text-muted">and {preview.changed.length - 20} more</p>
+              )}
             </div>
           )}
           {preview.warnings.map((w) => (
@@ -172,19 +198,17 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
               {w}
             </p>
           ))}
-          <div className="flex overflow-hidden rounded-[10px] border border-edge" role="group" aria-label="Import mode">
-            {(['add', 'update', 'replace'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                aria-pressed={mode === m}
-                className={`flex-1 cursor-pointer px-3 py-2 ${mode === m ? 'bg-accent-soft font-bold text-accent' : 'text-muted'}`}
-              >
-                {m === 'add' ? 'Add new only' : m === 'update' ? 'Add and update' : 'Replace all'}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="Import mode"
+            className="w-full"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'add', label: 'Add new only' },
+              { value: 'update', label: 'Add and update' },
+              { value: 'replace', label: 'Replace all' }
+            ]}
+          />
           <p className="text-sm text-muted">
             {mode === 'add'
               ? 'Adds the new items. Items you already have are left exactly as they are, even if the file has a different version of them.'
@@ -206,11 +230,14 @@ export function DataSection({ onLibraryChanged }: Props): React.JSX.Element {
       <div className="flex flex-col gap-2">
         <h3 className="font-bold">Backups</h3>
         <p className="text-sm text-muted">
-          Shelf keeps a copy of your library from before your first change each day (the last 14), and a copy before every restore or replace.
-          Backups hold the library only; images travel in exports.
+          Shelf keeps a copy of your library from before your first change each day (the last 14),
+          and a copy before every restore or replace. Backups hold the library only; images travel
+          in exports.
         </p>
         {backups.length === 0 ? (
-          <p className="text-muted">No backups yet. The first appears after the second day you change something.</p>
+          <p className="text-muted">
+            No backups yet. The first appears after the second day you change something.
+          </p>
         ) : (
           backups.map((b) => (
             <div key={b.name} className="flex items-center gap-3 border-t border-line py-2">

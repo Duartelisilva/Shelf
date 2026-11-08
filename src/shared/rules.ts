@@ -58,7 +58,11 @@ export function parseDate(text: string, today: Date = new Date()): Parsed<string
     return { ok: false, error: `The year must be between ${MIN_YEAR} and ${MAX_YEAR}.` }
   }
   const check = new Date(Date.UTC(year, month - 1, day))
-  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) {
     return { ok: false, error: 'That day does not exist in the calendar.' }
   }
   const pad = (n: number): string => String(n).padStart(2, '0')
@@ -79,7 +83,10 @@ export function parseDate(text: string, today: Date = new Date()): Parsed<string
 export function parseSeasonNumber(text: string, seasons?: number): Parsed<number> {
   const result = parsePositiveInt(text)
   if (result.ok && seasons !== undefined && result.value > seasons) {
-    return { ok: false, error: `This series has ${seasons} ${seasons === 1 ? 'season' : 'seasons'}.` }
+    return {
+      ok: false,
+      error: `This series has ${seasons} ${seasons === 1 ? 'season' : 'seasons'}.`
+    }
   }
   return result
 }
@@ -97,7 +104,8 @@ export function itemProblems(
 ): string[] {
   const problems: string[] = []
   if (item.year === undefined) problems.push('Year is missing.')
-  else if (!isValidYear(item.year)) problems.push(`Year must be between ${MIN_YEAR} and ${MAX_YEAR}.`)
+  else if (!isValidYear(item.year))
+    problems.push(`Year must be between ${MIN_YEAR} and ${MAX_YEAR}.`)
   if (item.yearEnd !== undefined) {
     if (!isValidYear(item.yearEnd) || (isValidYear(item.year) && item.yearEnd < item.year)) {
       problems.push('End year is invalid or before the start year.')
@@ -113,7 +121,8 @@ export function itemProblems(
   }
   for (const date of item.dates) {
     const parsed = parseDate(date, today)
-    if (!parsed.ok || parsed.value !== date) problems.push(`The date ${date} is invalid or in the future.`)
+    if (!parsed.ok || parsed.value !== date)
+      problems.push(`The date ${date} is invalid or in the future.`)
   }
   return problems
 }

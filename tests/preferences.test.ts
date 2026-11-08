@@ -39,7 +39,9 @@ describe('preferences', () => {
   it('handles several quick changes in order', async () => {
     const dir = await folder()
     const store = createPreferencesStore(dir)
-    await Promise.all(['midnight', 'daylight', 'graphite', 'forest', 'paper'].map((t) => store.setTheme(t as never)))
+    await Promise.all(
+      ['midnight', 'daylight', 'graphite', 'forest', 'paper'].map((t) => store.setTheme(t as never))
+    )
     expect((await store.get()).theme).toBe('paper')
     expect(JSON.parse(await readFile(join(dir, 'preferences.json'), 'utf8')).theme).toBe('paper')
   })

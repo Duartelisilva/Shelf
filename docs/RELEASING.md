@@ -20,7 +20,7 @@ attaches it to a GitHub release with generated notes.
    git tag v2.0.0
    git push origin main --tags
    ```
-4. Open the **Actions** tab, wait for the *Release* run, then find the exe under
+4. Open the **Actions** tab, wait for the _Release_ run, then find the exe under
    **Releases**. Edit the release notes there if you like.
 
 The exe is named after `package.json`'s version, so the tag and the version should match.
@@ -36,9 +36,9 @@ The exe appears in `dist/` as `Shelf-<version>-portable.exe`.
 ## If something goes wrong
 
 - **"Cannot create symbolic link ... A required privilege is not held by the client"**
-  while building on Windows: turn on *Developer Mode* (Settings, Privacy & security,
+  while building on Windows: turn on _Developer Mode_ (Settings, Privacy & security,
   For developers), or run the terminal as administrator once, then build again.
 - **Windows SmartScreen warns about the exe**: it is not code-signed (certificates are paid).
-  Use *More info*, then *Run anyway*.
+  Use _More info_, then _Run anyway_.
 - **The portable exe starts slowly**: it unpacks itself to a temporary folder on every launch.
   That is how portable builds work.

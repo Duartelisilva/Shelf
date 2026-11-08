@@ -103,7 +103,8 @@ export async function parseArchive(data: Buffer): Promise<ParsedArchive> {
   if (!manifestFile || !libraryFile) {
     throw new Error('This is not a Shelf export: manifest.json or library.json is missing.')
   }
-  if ((unpackedSize(libraryFile) ?? 0) > MAX_LIBRARY_BYTES) throw new Error('The library in this file is too large.')
+  if ((unpackedSize(libraryFile) ?? 0) > MAX_LIBRARY_BYTES)
+    throw new Error('The library in this file is too large.')
 
   let manifest: Manifest
   try {
@@ -125,7 +126,8 @@ export async function parseArchive(data: Buffer): Promise<ParsedArchive> {
   } catch {
     throw new Error('library.json in this file cannot be read.')
   }
-  if (!isWellFormed(library)) throw new Error('library.json in this file is not a valid Shelf library.')
+  if (!isWellFormed(library))
+    throw new Error('library.json in this file is not a valid Shelf library.')
 
   const warnings: string[] = []
   const images = new Map<string, Buffer>()

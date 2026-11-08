@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { SettingsStatus } from '../../../shared/api'
+import { inputClass } from './ui'
+import { buttonClass } from '../lib/uiStyles'
 
-const button = 'cursor-pointer rounded-lg border border-edge px-4 py-2 disabled:cursor-not-allowed disabled:opacity-40'
+const button = buttonClass('secondary')
 
 // The key for the optional poster and details lookup. It is stored encrypted by
 // the operating system and never shown again: Shelf only tells you that one is
@@ -20,7 +22,10 @@ export function MetadataSection(): React.JSX.Element {
   }, [])
 
   const refresh = (): void => {
-    window.api.settings.status().then(setStatus).catch(() => undefined)
+    window.api.settings
+      .status()
+      .then(setStatus)
+      .catch(() => undefined)
   }
 
   const save = async (): Promise<void> => {
@@ -47,7 +52,9 @@ export function MetadataSection(): React.JSX.Element {
     setMessage(null)
     try {
       const result = await window.api.settings.testTmdbKey()
-      setMessage(result.ok ? { ok: true, text: 'TMDB accepted the key.' } : { ok: false, text: result.error })
+      setMessage(
+        result.ok ? { ok: true, text: 'TMDB accepted the key.' } : { ok: false, text: result.error }
+      )
     } catch (e) {
       setMessage({ ok: false, text: String(e) })
     } finally {
@@ -75,19 +82,29 @@ export function MetadataSection(): React.JSX.Element {
     <section className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
       <h2 className="text-base font-extrabold">Posters and details (optional)</h2>
       <p className="text-muted">
-        Shelf can look up posters and details for movies and series on TMDB, and you approve every match before anything changes.
-        For that it needs your own free TMDB key. Books use Open Library, which needs no key.
+        Shelf can look up posters and details for movies and series on TMDB, and you approve every
+        match before anything changes. For that it needs your own free TMDB key. Books use Open
+        Library, which needs no key.
       </p>
       <p className="text-sm text-muted">
         Get the key in your TMDB account under Settings, API (
-        <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noreferrer" className="text-accent underline">
+        <a
+          href="https://www.themoviedb.org/settings/api"
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent underline"
+        >
           themoviedb.org/settings/api
         </a>
         ). Either the &quot;API Key&quot; or the &quot;API Read Access Token&quot; works.
       </p>
 
       {message && (
-        <p className={`rounded-lg p-3 ${message.ok ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger'}`}>{message.text}</p>
+        <p
+          className={`rounded-lg p-3 ${message.ok ? 'bg-ok-soft text-ok' : 'bg-danger-soft text-danger'}`}
+        >
+          {message.text}
+        </p>
       )}
 
       {hasKey ? (
@@ -112,9 +129,14 @@ export function MetadataSection(): React.JSX.Element {
             placeholder="Paste your TMDB key"
             aria-label="TMDB key"
             autoComplete="off"
-            className="w-[360px] rounded-lg border border-edge bg-ground px-3 py-2"
+            className={`${inputClass} w-[360px]`}
           />
-          <button type="button" onClick={save} disabled={busy || !key.trim()} className="cursor-pointer rounded-lg bg-accent px-4 py-2 font-bold text-on-accent disabled:opacity-40">
+          <button
+            type="button"
+            onClick={save}
+            disabled={busy || !key.trim()}
+            className={buttonClass('primary')}
+          >
             Save key
           </button>
         </div>
@@ -126,7 +148,8 @@ export function MetadataSection(): React.JSX.Element {
         </p>
       )}
       <p className="text-xs text-muted">
-        The key is encrypted by Windows for your account and is only ever sent to TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.
+        The key is encrypted by Windows for your account and is only ever sent to TMDB. This product
+        uses the TMDB API but is not endorsed or certified by TMDB.
       </p>
     </section>
   )

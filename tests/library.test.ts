@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { applyFilters, formatDate, genreOptions, groupItems, lastDate, posterColor, readableOn, sectionCounts, sectionItems } from '../src/renderer/src/lib/library'
+import {
+  applyFilters,
+  formatDate,
+  genreOptions,
+  groupItems,
+  lastDate,
+  posterColor,
+  readableOn,
+  sectionCounts,
+  sectionItems
+} from '../src/renderer/src/lib/library'
 import type { MediaItem } from '../src/shared/types'
 
 const make = (over: Partial<MediaItem> & { title: string }): MediaItem => ({
@@ -14,17 +24,42 @@ const make = (over: Partial<MediaItem> & { title: string }): MediaItem => ({
 })
 
 const items: MediaItem[] = [
-  make({ title: 'Alien', year: 1979, genres: ['Horror', 'Sci-Fi'], franchise: 'Alien', franchiseOrder: 1 }),
-  make({ title: 'Aliens', year: 1986, genres: ['Sci-Fi'], franchise: 'Alien', franchiseOrder: 2, isFavorite: true }),
+  make({
+    title: 'Alien',
+    year: 1979,
+    genres: ['Horror', 'Sci-Fi'],
+    franchise: 'Alien',
+    franchiseOrder: 1
+  }),
+  make({
+    title: 'Aliens',
+    year: 1986,
+    genres: ['Sci-Fi'],
+    franchise: 'Alien',
+    franchiseOrder: 2,
+    isFavorite: true
+  }),
   make({ title: 'Amélie', year: 2001, genres: ['Comedy'] }),
   make({ title: 'Dark', type: 'series', genres: ['Sci-Fi'], dates: ['2022-05-01', '2024-01-02'] }),
-  make({ title: 'Hyperion', type: 'book', status: 'wishlist', author: 'Dan Simmons', genres: ['Sci-Fi'] })
+  make({
+    title: 'Hyperion',
+    type: 'book',
+    status: 'wishlist',
+    author: 'Dan Simmons',
+    genres: ['Sci-Fi']
+  })
 ]
 
 describe('sections', () => {
   it('counts each sidebar entry; wishlist items stay out of Movies, Series and Books', () => {
     expect(sectionCounts(items)).toEqual({
-      library: 5, movie: 3, series: 1, book: 0, 'in-progress': 0, wishlist: 1, favorites: 1
+      library: 5,
+      movie: 3,
+      series: 1,
+      book: 0,
+      'in-progress': 0,
+      wishlist: 1,
+      favorites: 1
     })
   })
 })
@@ -33,13 +68,23 @@ describe('filters', () => {
   const base = { section: 'library' as const, query: '', genre: null, favoritesOnly: false }
 
   it('searches title, author and genre, ignoring accents and case', () => {
-    expect(applyFilters(items, { ...base, query: 'amelie' }).map((i) => i.title)).toEqual(['Amélie'])
-    expect(applyFilters(items, { ...base, query: 'simmons' }).map((i) => i.title)).toEqual(['Hyperion'])
-    expect(applyFilters(items, { ...base, query: 'horror alien' }).map((i) => i.title)).toEqual(['Alien'])
+    expect(applyFilters(items, { ...base, query: 'amelie' }).map((i) => i.title)).toEqual([
+      'Amélie'
+    ])
+    expect(applyFilters(items, { ...base, query: 'simmons' }).map((i) => i.title)).toEqual([
+      'Hyperion'
+    ])
+    expect(applyFilters(items, { ...base, query: 'horror alien' }).map((i) => i.title)).toEqual([
+      'Alien'
+    ])
   })
 
   it('filters by genre and favorites together', () => {
-    const result = applyFilters(items, { ...base, genre: { type: 'movie', name: 'Sci-Fi' }, favoritesOnly: true })
+    const result = applyFilters(items, {
+      ...base,
+      genre: { type: 'movie', name: 'Sci-Fi' },
+      favoritesOnly: true
+    })
     expect(result.map((i) => i.title)).toEqual(['Aliens'])
   })
 
@@ -75,12 +120,18 @@ describe('grouping', () => {
     const shelves = groupItems(items, 'genre', { wishlistShelf: false })
     const sciFi = shelves.filter((s) => s.title === 'Sci-Fi')
     expect(sciFi.map((s) => s.tag)).toEqual(['Movies', 'Series', 'Books'])
-    expect(sciFi.map((s) => s.items.map((i) => i.title))).toEqual([['Alien', 'Aliens'], ['Dark'], ['Hyperion']])
+    expect(sciFi.map((s) => s.items.map((i) => i.title))).toEqual([
+      ['Alien', 'Aliens'],
+      ['Dark'],
+      ['Hyperion']
+    ])
   })
 
   it('shows no type tag when only one type is on screen', () => {
     const movies = items.filter((i) => i.type === 'movie')
-    expect(groupItems(movies, 'genre', { wishlistShelf: false }).every((s) => s.tag === undefined)).toBe(true)
+    expect(
+      groupItems(movies, 'genre', { wishlistShelf: false }).every((s) => s.tag === undefined)
+    ).toBe(true)
   })
 
   it('pulls the wishlist into its own last shelf when asked', () => {

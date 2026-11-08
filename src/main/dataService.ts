@@ -3,7 +3,14 @@
 
 import { promises as fs } from 'node:fs'
 import { basename } from 'node:path'
-import type { BackupInfo, ChangedItem, DataImportSummary, ExportResult, ImportMode, ImportPreview } from '../shared/api'
+import type {
+  BackupInfo,
+  ChangedItem,
+  DataImportSummary,
+  ExportResult,
+  ImportMode,
+  ImportPreview
+} from '../shared/api'
 import { mergeIntoLibrary } from '../shared/importV1'
 import type { Library, MediaItem } from '../shared/types'
 import { buildArchive, parseArchive } from './archive'
@@ -35,7 +42,13 @@ interface Deps {
   now?: () => Date
 }
 
-export function createDataService({ storage, images, backupsDir, appVersion, now = () => new Date() }: Deps): DataService {
+export function createDataService({
+  storage,
+  images,
+  backupsDir,
+  appVersion,
+  now = () => new Date()
+}: Deps): DataService {
   async function exportTo(path: string): Promise<ExportResult> {
     await storage.flush()
     const { library } = await storage.load()
@@ -89,7 +102,11 @@ export function createDataService({ storage, images, backupsDir, appVersion, now
   }
 
   // Makes sure an imported item's image is stored, or drops the reference.
-  async function withImage(item: MediaItem, parsed: ParsedArchive, warnings: string[]): Promise<MediaItem> {
+  async function withImage(
+    item: MediaItem,
+    parsed: ParsedArchive,
+    warnings: string[]
+  ): Promise<MediaItem> {
     if (!item.image) return item
     const bytes = parsed.images.get(item.image)
     if (bytes) {
@@ -138,7 +155,14 @@ export function createDataService({ storage, images, backupsDir, appVersion, now
       if (updated > 0) await storage.snapshot('import') // something existing is overwritten
       const library: Library = { ...current, items }
       await storage.save(library)
-      return { mode, added: merged.added, updated, skipped: merged.skipped - updated, warnings, library }
+      return {
+        mode,
+        added: merged.added,
+        updated,
+        skipped: merged.skipped - updated,
+        warnings,
+        library
+      }
     }
 
     const merged = mergeIntoLibrary(current, parsed.library.items)

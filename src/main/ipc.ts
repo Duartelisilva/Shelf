@@ -18,7 +18,6 @@ import type {
   V1Scan
 } from '../shared/api'
 import { importV1, mergeIntoLibrary } from '../shared/importV1'
-import type { SagaKind } from '../shared/importV1'
 import type { Library, MediaType } from '../shared/types'
 import { ARCHIVE_EXTENSION } from './archive'
 import { createDataService } from './dataService'
@@ -35,17 +34,22 @@ import { readV1Folder } from './v1files'
 const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000
 
 // File pickers, attached to the window that has the focus.
-async function chooseFile(options: Record<string, unknown>): Promise<{ canceled: boolean; filePaths: string[] }> {
+async function chooseFile(
+  options: Record<string, unknown>
+): Promise<{ canceled: boolean; filePaths: string[] }> {
   const parent = BrowserWindow.getFocusedWindow()
   return parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options)
 }
-async function chooseSavePath(options: Record<string, unknown>): Promise<{ canceled: boolean; filePath?: string }> {
+async function chooseSavePath(
+  options: Record<string, unknown>
+): Promise<{ canceled: boolean; filePath?: string }> {
   const parent = BrowserWindow.getFocusedWindow()
   return parent ? dialog.showSaveDialog(parent, options) : dialog.showSaveDialog(options)
 }
 
 const pad = (n: number): string => String(n).padStart(2, '0')
-const todayStamp = (d = new Date()): string => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+const todayStamp = (d = new Date()): string =>
+  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 export function registerIpc(): void {
   const userData = app.getPath('userData')
@@ -77,7 +81,9 @@ export function registerIpc(): void {
     return result
   })
   ipcMain.handle(CHANNELS.librarySave, (_event, library: Library) => storage.save(library))
-  ipcMain.handle(CHANNELS.imagePick, (_event, itemId: string): Promise<ImagePick> => images.pick(itemId))
+  ipcMain.handle(CHANNELS.imagePick, (_event, itemId: string): Promise<ImagePick> =>
+    images.pick(itemId)
+  )
   ipcMain.handle(CHANNELS.imageRemove, (_event, fileName: string) => images.store.remove(fileName))
 
   // ----- export, import and backups of your own library
@@ -91,44 +97,59 @@ export function registerIpc(): void {
     return data.exportTo(picked.filePath)
   })
 
-  ipcMain.handle(CHANNELS.dataPickImport, async (): Promise<ImportPreview | { error: string } | null> => {
-    const picked = await chooseFile({
-      title: 'Choose a Shelf export',
-      properties: ['openFile'],
-      filters: [{ name: 'Shelf export', extensions: [ARCHIVE_EXTENSION] }]
-    })
-    if (picked.canceled || picked.filePaths.length === 0) return null
-    try {
-      pendingImport = await data.inspect(picked.filePaths[0])
-      return pendingImport.preview
-    } catch (error) {
-      pendingImport = null
-      return { error: error instanceof Error ? error.message : 'The file could not be read.' }
+  ipcMain.handle(
+    CHANNELS.dataPickImport,
+    async (): Promise<ImportPreview | { error: string } | null> => {
+      const picked = await chooseFile({
+        title: 'Choose a Shelf export',
+        properties: ['openFile'],
+        filters: [{ name: 'Shelf export', extensions: [ARCHIVE_EXTENSION] }]
+      })
+      if (picked.canceled || picked.filePaths.length === 0) return null
+      try {
+        pendingImport = await data.inspect(picked.filePaths[0])
+        return pendingImport.preview
+      } catch (error) {
+        pendingImport = null
+        return { error: error instanceof Error ? error.message : 'The file could not be read.' }
+      }
     }
-  })
+  )
 
-  ipcMain.handle(CHANNELS.dataCommitImport, async (_event, mode: ImportMode): Promise<DataImportSummary> => {
-    if (!pendingImport) throw new Error('No file was chosen.')
-    if (mode !== 'add' && mode !== 'update' && mode !== 'replace') throw new Error('Unknown import mode.')
-    const summary = await pendingImport.commit(mode)
-    pendingImport = null
-    return summary
-  })
+  ipcMain.handle(
+    CHANNELS.dataCommitImport,
+    async (_event, mode: ImportMode): Promise<DataImportSummary> => {
+      if (!pendingImport) throw new Error('No file was chosen.')
+      if (mode !== 'add' && mode !== 'update' && mode !== 'replace')
+        throw new Error('Unknown import mode.')
+      const summary = await pendingImport.commit(mode)
+      pendingImport = null
+      return summary
+    }
+  )
 
   ipcMain.handle(CHANNELS.dataListBackups, () => data.listBackups())
-  ipcMain.handle(CHANNELS.dataRestoreBackup, (_event, name: string) => data.restoreBackup(String(name)))
+  ipcMain.handle(CHANNELS.dataRestoreBackup, (_event, name: string) =>
+    data.restoreBackup(String(name))
+  )
   ipcMain.handle(CHANNELS.dataOpenFolder, async () => {
     await shell.openPath(userData)
   })
 
   // ----- preferences (the colour theme)
   ipcMain.handle(CHANNELS.preferencesGet, () => preferences.get())
-  ipcMain.handle(CHANNELS.preferencesSetTheme, (_event, theme: unknown) => preferences.setTheme(theme as never))
+  ipcMain.handle(CHANNELS.preferencesSetTheme, (_event, theme: unknown) =>
+    preferences.setTheme(theme as never)
+  )
 
   // ----- settings (the TMDB key)
   ipcMain.handle(CHANNELS.settingsStatus, () => settings.status())
-  ipcMain.handle(CHANNELS.settingsSaveTmdbKey, (_event, key: string): Promise<KeyCheck> | KeyCheck =>
-    typeof key === 'string' ? settings.saveTmdbKey(key) : { ok: false, error: 'No key was given.' }
+  ipcMain.handle(
+    CHANNELS.settingsSaveTmdbKey,
+    (_event, key: string): Promise<KeyCheck> | KeyCheck =>
+      typeof key === 'string'
+        ? settings.saveTmdbKey(key)
+        : { ok: false, error: 'No key was given.' }
   )
   ipcMain.handle(CHANNELS.settingsClearTmdbKey, () => settings.clearTmdbKey())
   ipcMain.handle(CHANNELS.settingsTestTmdbKey, async (): Promise<KeyCheck> => {
@@ -141,21 +162,33 @@ export function registerIpc(): void {
   // window only names a type, a text and an id, never an address)
   const TYPES: string[] = ['movie', 'series', 'book']
   const SOURCES: string[] = ['tmdb', 'openlibrary']
-  const validId = (id: unknown): id is string => typeof id === 'string' && /^[A-Za-z0-9]{1,20}$/.test(id)
-  ipcMain.handle(CHANNELS.metadataSearch, (_event, type: MediaType, query: string): Promise<LookupSearch> | LookupSearch =>
-    TYPES.includes(type) && typeof query === 'string' ? lookup.search(type, query) : { ok: false, error: 'Invalid search.' }
+  const validId = (id: unknown): id is string =>
+    typeof id === 'string' && /^[A-Za-z0-9]{1,20}$/.test(id)
+  ipcMain.handle(
+    CHANNELS.metadataSearch,
+    (_event, type: MediaType, query: string): Promise<LookupSearch> | LookupSearch =>
+      TYPES.includes(type) && typeof query === 'string'
+        ? lookup.search(type, query)
+        : { ok: false, error: 'Invalid search.' }
   )
   ipcMain.handle(
     CHANNELS.metadataDetails,
-    (_event, type: MediaType, source: LookupSource, id: string): Promise<LookupDetails> | LookupDetails =>
+    (
+      _event,
+      type: MediaType,
+      source: LookupSource,
+      id: string
+    ): Promise<LookupDetails> | LookupDetails =>
       TYPES.includes(type) && SOURCES.includes(source) && validId(id)
         ? lookup.details(type, source, id)
         : { ok: false, error: 'Invalid request.' }
   )
-  ipcMain.handle(CHANNELS.metadataPoster, (_event, itemId: string, source: LookupSource, id: string) =>
-    typeof itemId === 'string' && SOURCES.includes(source) && validId(id)
-      ? lookup.downloadPoster(itemId, source, id)
-      : { error: 'Invalid request.' }
+  ipcMain.handle(
+    CHANNELS.metadataPoster,
+    (_event, itemId: string, source: LookupSource, id: string) =>
+      typeof itemId === 'string' && SOURCES.includes(source) && validId(id)
+        ? lookup.downloadPoster(itemId, source, id)
+        : { error: 'Invalid request.' }
   )
 
   // ----- first-time setup: import from MediaTracker V1
@@ -184,33 +217,24 @@ export function registerIpc(): void {
         books: count('book', false),
         wishlist: preview.items.filter((i) => i.status === 'wishlist').length
       },
-      sagaCounts: preview.sagaCounts,
       warnings: preview.warnings
     }
   })
 
-  ipcMain.handle(
-    CHANNELS.importCommit,
-    async (_event, sagaAs: Record<string, SagaKind>): Promise<ImportSummary> => {
-      if (!pendingFolder) throw new Error('No folder was selected.')
-      // Only "collection" is ever needed from the UI; everything else is a genre.
-      const kinds: Record<string, SagaKind> = {}
-      for (const [value, kind] of Object.entries(sagaAs ?? {})) {
-        if (kind === 'collection') kinds[value] = 'collection'
-      }
-      const v1 = await readV1Folder(pendingFolder)
-      const result = importV1(v1.files, { sagaAs: kinds })
-      await storage.flush()
-      const { library } = await storage.load()
-      const merged = mergeIntoLibrary(library, result.items)
-      await storage.save(merged.library)
-      pendingFolder = null
-      return {
-        added: merged.added,
-        skipped: merged.skipped,
-        warnings: result.warnings,
-        library: merged.library
-      }
+  ipcMain.handle(CHANNELS.importCommit, async (): Promise<ImportSummary> => {
+    if (!pendingFolder) throw new Error('No folder was selected.')
+    const v1 = await readV1Folder(pendingFolder)
+    const result = importV1(v1.files)
+    await storage.flush()
+    const { library } = await storage.load()
+    const merged = mergeIntoLibrary(library, result.items)
+    await storage.save(merged.library)
+    pendingFolder = null
+    return {
+      added: merged.added,
+      skipped: merged.skipped,
+      warnings: result.warnings,
+      library: merged.library
     }
-  )
+  })
 }

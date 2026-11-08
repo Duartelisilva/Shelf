@@ -10,7 +10,13 @@ describe('searchOpenLibrary', () => {
         reply: {
           json: {
             docs: [
-              { key: '/works/OL893415W', title: 'Dune', author_name: ['Frank Herbert', 'Someone Else', 'Third'], first_publish_year: 1965, cover_i: 12345 },
+              {
+                key: '/works/OL893415W',
+                title: 'Dune',
+                author_name: ['Frank Herbert', 'Someone Else', 'Third'],
+                first_publish_year: 1965,
+                cover_i: 12345
+              },
               { key: '/books/OL1M', title: 'Not a work' },
               { key: '/works/OL2W', title: 'No cover or author' }
             ]
@@ -24,16 +30,38 @@ describe('searchOpenLibrary', () => {
     if (!result.ok) throw new Error('expected a result')
     expect(result.value).toHaveLength(2)
     const [dune, bare] = result.value
-    expect(dune.candidate).toMatchObject({ id: 'OL893415W', source: 'openlibrary', title: 'Dune', year: 1965, subtitle: 'Frank Herbert, Someone Else' })
-    expect(dune.proposal).toMatchObject({ author: 'Frank Herbert', year: 1965, genres: [], hasPoster: true })
+    expect(dune.candidate).toMatchObject({
+      id: 'OL893415W',
+      source: 'openlibrary',
+      title: 'Dune',
+      year: 1965,
+      subtitle: 'Frank Herbert, Someone Else'
+    })
+    expect(dune.proposal).toMatchObject({
+      author: 'Frank Herbert',
+      year: 1965,
+      genres: [],
+      hasPoster: true
+    })
     expect(dune.thumbUrl).toBe('https://covers.openlibrary.org/b/id/12345-S.jpg')
     expect(dune.posterUrl).toBe('https://covers.openlibrary.org/b/id/12345-L.jpg')
     expect(bare.proposal.hasPoster).toBe(false)
     expect(bare.thumbUrl).toBeNull()
   })
 
+  it('tells a slow answer apart from being offline', async () => {
+    const slow = (async () => {
+      throw Object.assign(new Error('timed out'), { name: 'TimeoutError' })
+    }) as unknown as typeof fetch
+    const result = await searchOpenLibrary('x', slow)
+    expect(result.ok === false && result.error).toContain('did not answer in time')
+  })
+
   it('explains a server error and a missing connection', async () => {
-    const broken = await searchOpenLibrary('x', fakeFetch([{ match: 'openlibrary', reply: { status: 503 } }]).fetchFn)
+    const broken = await searchOpenLibrary(
+      'x',
+      fakeFetch([{ match: 'openlibrary', reply: { status: 503 } }]).fetchFn
+    )
     expect(broken.ok === false && broken.error).toContain('503')
     const offline = await searchOpenLibrary('x', fakeFetch([]).fetchFn)
     expect(offline.ok === false && offline.error).toContain('Could not reach Open Library')

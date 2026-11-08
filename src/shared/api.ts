@@ -3,7 +3,6 @@
 
 import type { ThemeChoice } from './themes'
 import type { Library, MediaType } from './types'
-import type { SagaKind } from './importV1'
 
 export const CHANNELS = {
   libraryLoad: 'library:load',
@@ -41,7 +40,6 @@ export interface V1Scan {
   missing: string[]
   problems: string[]
   counts: { movies: number; series: number; books: number; wishlist: number }
-  sagaCounts: Record<string, number>
   warnings: string[]
 }
 
@@ -126,8 +124,7 @@ export interface LookupCandidate {
 }
 
 export type LookupSearch =
-  | { ok: true; candidates: LookupCandidate[] }
-  | { ok: false; error: string }
+  { ok: true; candidates: LookupCandidate[] } | { ok: false; error: string }
 
 // What a match offers. Nothing is applied until the user ticks it and confirms.
 export interface LookupProposal {
@@ -178,10 +175,14 @@ export interface ShelfApi {
   metadata: {
     search(type: MediaType, query: string): Promise<LookupSearch>
     details(type: MediaType, source: LookupSource, id: string): Promise<LookupDetails>
-    downloadPoster(itemId: string, source: LookupSource, id: string): Promise<{ fileName: string } | { error: string }>
+    downloadPoster(
+      itemId: string,
+      source: LookupSource,
+      id: string
+    ): Promise<{ fileName: string } | { error: string }>
   }
   importV1: {
     pickFolder(): Promise<V1Scan | null>
-    commit(sagaAs: Record<string, SagaKind>): Promise<ImportSummary>
+    commit(): Promise<ImportSummary>
   }
 }

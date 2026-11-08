@@ -77,7 +77,9 @@ function App(): React.JSX.Element {
   const persist = (next: Library): void => {
     setLibrary(next)
     setSaveError(null)
-    window.api.library.save(next).catch((e) => setSaveError(`Could not save your library: ${String(e)}`))
+    window.api.library
+      .save(next)
+      .catch((e) => setSaveError(`Could not save your library: ${String(e)}`))
   }
 
   const commit = (nextItems: MediaItem[], undoLabel?: string): void => {
@@ -96,7 +98,9 @@ function App(): React.JSX.Element {
 
   const changeTheme = (next: ThemeChoice): void => {
     setTheme(next)
-    window.api.preferences.setTheme(next).catch((e) => setSaveError(`Could not save the theme: ${String(e)}`))
+    window.api.preferences
+      .setTheme(next)
+      .catch((e) => setSaveError(`Could not save the theme: ${String(e)}`))
   }
 
   const undoLast = (): void => {
@@ -149,13 +153,24 @@ function App(): React.JSX.Element {
         {undo && (
           <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-edge bg-panel px-5 py-3 shadow-lg">
             <span>{undo.label}</span>
-            <button type="button" onClick={undoLast} className="cursor-pointer font-extrabold text-accent">
+            <button
+              type="button"
+              onClick={undoLast}
+              className="cursor-pointer font-extrabold text-accent"
+            >
               Undo
             </button>
           </div>
         )}
       </main>
-      {adding && <AddItemDialog items={items} section={section} onAdd={addItem} onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddItemDialog
+          items={items}
+          section={section}
+          onAdd={addItem}
+          onClose={() => setAdding(false)}
+        />
+      )}
     </div>
   )
 }

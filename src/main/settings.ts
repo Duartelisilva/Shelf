@@ -22,12 +22,14 @@ export interface SettingsStore {
 
 interface SettingsFile {
   version: 1
-  tmdbKey?: string // encrypted
+  tmdbKey?: string // "enc1:" followed by the encrypted key
 }
 
 // Both kinds of TMDB credential (the 32-character "API Key" and the long
 // "API Read Access Token") are made of these characters.
 const KEY_FORMAT = /^[A-Za-z0-9._-]{16,}$/
+// Marks a value written by this version, so an old or damaged file is recognised.
+const PREFIX = 'enc1:'
 
 export function createSettingsStore(dir: string, box: SecretBox): SettingsStore {
   const file = join(dir, 'settings.json')
@@ -36,7 +38,10 @@ export function createSettingsStore(dir: string, box: SecretBox): SettingsStore 
   async function read(): Promise<SettingsFile> {
     try {
       const parsed = JSON.parse(await fs.readFile(file, 'utf8')) as Partial<SettingsFile>
-      return { version: 1, tmdbKey: typeof parsed.tmdbKey === 'string' ? parsed.tmdbKey : undefined }
+      return {
+        version: 1,
+        tmdbKey: typeof parsed.tmdbKey === 'string' ? parsed.tmdbKey : undefined
+      }
     } catch {
       return { version: 1 }
     }
@@ -53,14 +58,50 @@ export function createSettingsStore(dir: string, box: SecretBox): SettingsStore 
     return run
   }
 
-  async function getTmdbKey(): Promise<string | null> {
-    const { tmdbKey } = await read()
-    if (!tmdbKey) return null
-    try {
-      return box.decrypt(tmdbKey)
-    } catch {
-      return null // for example the file came from another Windows account
+  // Encrypts and saves a key. It checks the result: if the stored text still
+  // contains the key, the secure storage did not really protect it, and nothing is written.
+  async function store(key: string): Promise<KeyCheck> {
+    if (!box.available()) {
+      return {
+        ok: false,
+        error: 'Secure storage is not available on this computer, so the key was not saved.'
+      }
     }
+    const encoded = box.encrypt(key)
+    if (!encoded || encoded.includes(key)) {
+      return { ok: false, error: 'Secure storage did not protect the key, so it was not saved.' }
+    }
+    await write({ ...(await read()), version: 1, tmdbKey: `${PREFIX}${encoded}` })
+    return { ok: true }
+  }
+
+  async function getTmdbKey(): Promise<string | null> {
+    const { tmdbKey: stored } = await read()
+    if (!stored) return null
+
+    if (stored.startsWith(PREFIX)) {
+      try {
+        return box.decrypt(stored.slice(PREFIX.length))
+      } catch {
+        return null // for example the file came from another Windows account
+      }
+    }
+
+    // An older file. Either the encrypted text without the marker (kept, and
+    // rewritten in the current format), or a key that was stored as plain text
+    // (encrypted now, so it does not stay readable in the file).
+    try {
+      const key = box.decrypt(stored)
+      await store(key)
+      return key
+    } catch {
+      // not encrypted text: fall through
+    }
+    if (KEY_FORMAT.test(stored)) {
+      const saved = await store(stored)
+      return saved.ok ? stored : null
+    }
+    return null
   }
 
   return {
@@ -77,14 +118,11 @@ export function createSettingsStore(dir: string, box: SecretBox): SettingsStore 
       if (!KEY_FORMAT.test(trimmed)) {
         return {
           ok: false,
-          error: 'That does not look like a TMDB key. Paste the "API Key" or the "API Read Access Token" from your TMDB account.'
+          error:
+            'That does not look like a TMDB key. Paste the "API Key" or the "API Read Access Token" from your TMDB account.'
         }
       }
-      if (!box.available()) {
-        return { ok: false, error: 'Secure storage is not available on this computer, so the key was not saved.' }
-      }
-      await write({ ...(await read()), version: 1, tmdbKey: box.encrypt(trimmed) })
-      return { ok: true }
+      return store(trimmed)
     },
 
     async clearTmdbKey() {
