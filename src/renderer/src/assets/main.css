@@ -202,3 +202,13 @@ body {
   font-family: system-ui, 'Segoe UI', sans-serif;
   font-size: 14px;
 }
+
+/* The moving bar of the loading screen */
+@keyframes shelf-loading {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}

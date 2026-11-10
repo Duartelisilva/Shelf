@@ -17,4 +17,5 @@ win:
   target: portable
 portable:
   artifactName: ${productName}-${version}-portable.${ext}
+  splashImage: build/splash.bmp
 npmRebuild: false

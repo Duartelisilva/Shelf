@@ -189,6 +189,16 @@ Click a card.
 - [ ] (Only for a brand new setup) the V1 import no longer asks about genres or collections,
       and imports none.
 
+## 11c. Icon and loading screens
+
+- [ ] The built exe shows the new icon (four coloured books on a shelf) in Explorer, in the
+      taskbar and in the window corner. Windows keeps old icons in a cache: if you still see
+      the Electron icon, restart Explorer or rename the exe once.
+- [ ] Starting the **portable exe** shows a small splash image with the icon while it unpacks
+      (not in `npm run dev`).
+- [ ] When the app opens you briefly see the logo, "Shelf" and a moving bar before the library
+      appears, in the colours of your theme.
+
 ## 12. When you are done
 
 Send me the list of boxes that failed, with what you did, expected and saw. If everything

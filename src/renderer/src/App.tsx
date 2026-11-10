@@ -3,6 +3,7 @@ import type { ThemeChoice } from '../../shared/themes'
 import type { Library, MediaItem } from '../../shared/types'
 import { AddItemDialog } from './components/AddItemDialog'
 import { LibraryScreen } from './components/LibraryScreen'
+import { LoadingScreen } from './components/LoadingScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import { Sidebar } from './components/Sidebar'
 import type { View } from './components/Sidebar'
@@ -118,7 +119,7 @@ function App(): React.JSX.Element {
   }
 
   if (loadError) return <p className="p-8 text-danger">{loadError}</p>
-  if (!library) return <p className="p-8 text-muted">Loading…</p>
+  if (!library) return <LoadingScreen />
 
   return (
     <div className="flex h-full">

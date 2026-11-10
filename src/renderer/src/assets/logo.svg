@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#27305a"/><stop offset="1" stop-color="#0d111f"/></linearGradient></defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <path d="M219 700V342A22 22 0 0 1 241 320H317A22 22 0 0 1 339 342V700Z" fill="#8aa4ff"/>
+  <rect x="219" y="390" width="120" height="16" fill="#6376b7"/>
+  <rect x="219" y="424" width="120" height="8" fill="#6376b7"/>
+  <path d="M361 700V262A22 22 0 0 1 383 240H489A22 22 0 0 1 511 262V700Z" fill="#4fd1b5"/>
+  <rect x="361" y="310" width="150" height="16" fill="#389682"/>
+  <rect x="361" y="344" width="150" height="8" fill="#389682"/>
+  <path d="M533 700V392A22 22 0 0 1 555 370H621A22 22 0 0 1 643 392V700Z" fill="#f5c451"/>
+  <rect x="533" y="440" width="110" height="16" fill="#b08d3a"/>
+  <rect x="533" y="474" width="110" height="8" fill="#b08d3a"/>
+  <path d="M665 700V302A22 22 0 0 1 687 280H783A22 22 0 0 1 805 302V700Z" fill="#ff6b78"/>
+  <rect x="665" y="350" width="140" height="16" fill="#b74d56"/>
+  <rect x="665" y="384" width="140" height="8" fill="#b74d56"/>
+  <rect x="150" y="700" width="724" height="48" rx="24" fill="#c9d1e8"/>
+  <rect x="150" y="700" width="724" height="38" rx="24" fill="#e4e9f7"/>
+</svg>
