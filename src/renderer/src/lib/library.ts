@@ -25,12 +25,18 @@ export interface GenreFilter {
   name: string
 }
 
+export type MissingField = 'genre' | 'image' | 'rating'
+
 export interface Filters {
   section: Section
   query: string
   genre: GenreFilter | null
   favoritesOnly: boolean
   attentionOnly?: boolean // only items with a missing or invalid year or date
+  yearFrom?: number // items without a year are left out when a year limit is set
+  yearTo?: number
+  minRating?: number // unrated items are left out when this is set
+  missing?: MissingField[] // only items that lack every field listed
 }
 
 export interface Shelf {
@@ -88,6 +94,14 @@ export function applyFilters(items: MediaItem[], filters: Filters): MediaItem[] 
     (item) =>
       (!filters.favoritesOnly || item.isFavorite) &&
       (!filters.attentionOnly || itemProblems(item).length > 0) &&
+      (filters.yearFrom === undefined ||
+        (item.year !== undefined && item.year >= filters.yearFrom)) &&
+      (filters.yearTo === undefined || (item.year !== undefined && item.year <= filters.yearTo)) &&
+      (filters.minRating === undefined ||
+        (item.rating !== undefined && item.rating >= filters.minRating)) &&
+      (!filters.missing?.includes('genre') || item.genres.length === 0) &&
+      (!filters.missing?.includes('image') || !item.image) &&
+      (!filters.missing?.includes('rating') || item.rating === undefined) &&
       (!filters.genre ||
         (item.type === filters.genre.type && item.genres.includes(filters.genre.name))) &&
       matchesQuery(item, filters.query)
@@ -283,4 +297,20 @@ export function addedDate(item: MediaItem): string {
   const d = new Date(item.createdAt)
   const pad = (n: number): string => String(n).padStart(2, '0')
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+}
+
+// How many filters are switched on, for the number shown on the Filters button.
+export function activeFilterCount(
+  filters: Pick<
+    Filters,
+    'favoritesOnly' | 'genre' | 'yearFrom' | 'yearTo' | 'minRating' | 'missing'
+  >
+): number {
+  return (
+    (filters.favoritesOnly ? 1 : 0) +
+    (filters.genre ? 1 : 0) +
+    (filters.yearFrom !== undefined || filters.yearTo !== undefined ? 1 : 0) +
+    (filters.minRating !== undefined ? 1 : 0) +
+    (filters.missing?.length ?? 0)
+  )
 }

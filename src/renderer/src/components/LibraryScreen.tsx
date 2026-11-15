@@ -2,11 +2,18 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { itemProblems } from '../../../shared/rules'
 import type { MediaItem } from '../../../shared/types'
 import { bulkGenre, cleanGenre, removeItem, replaceItem } from '../lib/edit'
-import { SECTION_TITLES, applyFilters, genreOptions, groupItems } from '../lib/library'
-import type { GenreFilter, GroupBy, Section, SortBy } from '../lib/library'
+import {
+  SECTION_TITLES,
+  activeFilterCount,
+  applyFilters,
+  genreOptions,
+  groupItems
+} from '../lib/library'
+import type { GenreFilter, GroupBy, MissingField, Section, SortBy } from '../lib/library'
 import { vocabularies } from '../lib/vocab'
 import { BulkBar } from './BulkBar'
 import { DetailPanel } from './DetailPanel'
+import { FilterBar } from './FilterBar'
 import { ShelfView } from './ShelfView'
 import { TopBar } from './TopBar'
 import { Button } from './ui'
@@ -37,6 +44,11 @@ export function LibraryScreen({
   const [sortBy, setSortBy] = useState<SortBy>('title')
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [attentionOnly, setAttentionOnly] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [yearFrom, setYearFrom] = useState('')
+  const [yearTo, setYearTo] = useState('')
+  const [minRating, setMinRating] = useState<number | null>(null)
+  const [missing, setMissing] = useState<MissingField[]>([])
   const [selectMode, setSelectMode] = useState(false)
   const [checked, setChecked] = useState<ReadonlySet<string>>(new Set())
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
@@ -70,6 +82,16 @@ export function LibraryScreen({
     [items]
   )
   const showAttention = attentionOnly && needAttention > 0
+  // A year only counts once it is four digits, so typing does not filter halfway.
+  const yearLimit = (text: string): number | undefined =>
+    /^\d{4}$/.test(text.trim()) ? Number(text.trim()) : undefined
+  const extra = {
+    yearFrom: yearLimit(yearFrom),
+    yearTo: yearLimit(yearTo),
+    minRating: minRating ?? undefined,
+    missing
+  }
+  const filterCount = activeFilterCount({ favoritesOnly, genre: activeGenre, ...extra })
   const visible = useMemo(
     () =>
       applyFilters(items, {
@@ -77,9 +99,22 @@ export function LibraryScreen({
         query,
         genre: activeGenre,
         favoritesOnly,
-        attentionOnly: showAttention
+        attentionOnly: showAttention,
+        ...extra
       }),
-    [items, section, query, activeGenre, favoritesOnly, showAttention]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      items,
+      section,
+      query,
+      activeGenre,
+      favoritesOnly,
+      showAttention,
+      yearFrom,
+      yearTo,
+      minRating,
+      missing
+    ]
   )
   const shelves = useMemo(
     () => groupItems(visible, groupBy, { wishlistShelf: section === 'library', sortBy }),
@@ -146,6 +181,9 @@ export function LibraryScreen({
           genres={genres}
           onGenre={setGenre}
           favoritesOnly={favoritesOnly}
+          filtersOpen={filtersOpen}
+          filterCount={filterCount}
+          onFilters={() => setFiltersOpen(!filtersOpen)}
           onFavoritesOnly={setFavoritesOnly}
           groupBy={groupBy}
           onGroupBy={setGroupBy}
@@ -157,6 +195,31 @@ export function LibraryScreen({
           onSelectMode={changeSelectMode}
           onAdd={onAdd}
         />
+        {filtersOpen && (
+          <FilterBar
+            yearFrom={yearFrom}
+            yearTo={yearTo}
+            minRating={minRating}
+            missing={missing}
+            canClear={filterCount > 0}
+            onYearFrom={setYearFrom}
+            onYearTo={setYearTo}
+            onMinRating={setMinRating}
+            onToggleMissing={(field) =>
+              setMissing(
+                missing.includes(field) ? missing.filter((f) => f !== field) : [...missing, field]
+              )
+            }
+            onClear={() => {
+              setYearFrom('')
+              setYearTo('')
+              setMinRating(null)
+              setMissing([])
+              setFavoritesOnly(false)
+              setGenre(null)
+            }}
+          />
+        )}
         <div className="flex flex-1 flex-col gap-8 overflow-y-auto p-7">
           <div className="flex items-center gap-3">
             <h1 className="text-[28px] font-extrabold">{SECTION_TITLES[section]}</h1>

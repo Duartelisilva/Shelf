@@ -33,12 +33,13 @@ export function ProgressField({ item, onChange }: Props): React.JSX.Element {
               onCommit={(v) => onChange(withProgress(item, p.season, v))}
             />
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => onChange(nextEpisode(item))}>
-              +1 episode
-            </Button>
-            <Button size="sm" onClick={() => onChange(nextSeason(item))}>
+          {/* Same gap and equal halves as the two boxes above, so each button sits under its box */}
+          <div className="flex gap-3">
+            <Button className="flex-1" onClick={() => onChange(nextSeason(item))}>
               Next season
+            </Button>
+            <Button className="flex-1" onClick={() => onChange(nextEpisode(item))}>
+              +1 episode
             </Button>
           </div>
         </>

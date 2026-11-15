@@ -12,6 +12,9 @@ interface Props {
   onGenre: (value: GenreFilter | null) => void
   favoritesOnly: boolean
   onFavoritesOnly: (value: boolean) => void
+  filtersOpen: boolean
+  filterCount: number
+  onFilters: () => void
   groupBy: GroupBy
   onGroupBy: (value: GroupBy) => void
   sortBy: SortBy
@@ -36,6 +39,9 @@ export function TopBar({
   onGenre,
   favoritesOnly,
   onFavoritesOnly,
+  filtersOpen,
+  filterCount,
+  onFilters,
   groupBy,
   onGroupBy,
   sortBy,
@@ -67,6 +73,9 @@ export function TopBar({
       />
       <Button pressed={favoritesOnly} onClick={() => onFavoritesOnly(!favoritesOnly)}>
         ★ Favorites
+      </Button>
+      <Button pressed={filtersOpen || filterCount > 0} onClick={onFilters}>
+        {filterCount > 0 ? `Filters (${filterCount})` : 'Filters'}
       </Button>
       <select
         value={genre ? `${genre.type}|${genre.name}` : ''}

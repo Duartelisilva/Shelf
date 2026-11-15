@@ -6,6 +6,50 @@ import type { TmdbResult } from './tmdb'
 
 const SEARCH_TIMEOUT_MS = 20_000
 
+// Open Library lists dozens of "subjects" per book, many of them not genres at all
+// ("Large type books", "Open Library Staff Picks"). Only subjects that match this
+// short list of real genres are used.
+const GENRE_RULES: [RegExp, string][] = [
+  [/\bfantasy\b/, 'Fantasy'],
+  [/science fiction|sci-fi/, 'Science Fiction'],
+  [/\bmystery\b|detective/, 'Mystery'],
+  [/thriller|suspense/, 'Thriller'],
+  [/\bhorror\b/, 'Horror'],
+  [/\bromance\b|love stories/, 'Romance'],
+  [/historical fiction/, 'Historical Fiction'],
+  [/\bhistory\b/, 'History'],
+  [/biograph|memoir/, 'Biography'],
+  [/\bcrime\b/, 'Crime'],
+  [/\badventure/, 'Adventure'],
+  [/young adult/, 'Young Adult'],
+  [/dystopia/, 'Dystopian'],
+  [/\bclassic/, 'Classics'],
+  [/philosophy/, 'Philosophy'],
+  [/psycholog/, 'Psychology'],
+  [/self-help|self help/, 'Self-help'],
+  [/humou?r|\bcomedy\b/, 'Humor'],
+  [/graphic novel|comics/, 'Graphic Novel'],
+  [/\bpoetry\b/, 'Poetry']
+]
+
+// The (at most three) genres that most of a book's subjects point to.
+export function genresFromSubjects(subjects: unknown): string[] {
+  if (!Array.isArray(subjects)) return []
+  const counts = new Map<string, number>()
+  for (const raw of subjects) {
+    if (typeof raw !== 'string') continue
+    const subject = raw.toLowerCase()
+    for (const [pattern, genre] of GENRE_RULES) {
+      if (pattern.test(subject)) counts.set(genre, (counts.get(genre) ?? 0) + 1)
+    }
+  }
+  const order = GENRE_RULES.map(([, genre]) => genre)
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || order.indexOf(a[0]) - order.indexOf(b[0]))
+    .slice(0, 3)
+    .map(([genre]) => genre)
+}
+
 export const OPEN_LIBRARY_USER_AGENT = 'Shelf (https://github.com/Duartelisilva/Shelf)'
 
 export interface BookMatch {
@@ -26,7 +70,7 @@ export async function searchOpenLibrary(
   fetchFn: typeof fetch = fetch
 ): Promise<TmdbResult<BookMatch[]>> {
   const url =
-    'https://openlibrary.org/search.json?limit=8&fields=key,title,author_name,first_publish_year,cover_i&q=' +
+    'https://openlibrary.org/search.json?limit=8&fields=key,title,author_name,first_publish_year,cover_i,subject&q=' +
     encodeURIComponent(query)
   let json: unknown
   try {
@@ -72,7 +116,7 @@ export async function searchOpenLibrary(
         source: 'openlibrary',
         externalId: id,
         year,
-        genres: [], // Open Library subjects are too many and too noisy to suggest
+        genres: genresFromSubjects(d.subject),
         author: authors[0],
         hasPoster: coverUrl(d.cover_i, 'L') !== null
       },

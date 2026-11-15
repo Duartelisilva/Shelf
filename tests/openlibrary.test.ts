@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { OPEN_LIBRARY_USER_AGENT, searchOpenLibrary } from '../src/main/metadata/openlibrary'
+import {
+  OPEN_LIBRARY_USER_AGENT,
+  genresFromSubjects,
+  searchOpenLibrary
+} from '../src/main/metadata/openlibrary'
 import { fakeFetch } from './helpers/fakeFetch'
 
 describe('searchOpenLibrary', () => {
@@ -15,7 +19,8 @@ describe('searchOpenLibrary', () => {
                 title: 'Dune',
                 author_name: ['Frank Herbert', 'Someone Else', 'Third'],
                 first_publish_year: 1965,
-                cover_i: 12345
+                cover_i: 12345,
+                subject: ['Science fiction', 'Dune (Imaginary place)', 'Fiction']
               },
               { key: '/books/OL1M', title: 'Not a work' },
               { key: '/works/OL2W', title: 'No cover or author' }
@@ -40,7 +45,7 @@ describe('searchOpenLibrary', () => {
     expect(dune.proposal).toMatchObject({
       author: 'Frank Herbert',
       year: 1965,
-      genres: [],
+      genres: ['Science Fiction'],
       hasPoster: true
     })
     expect(dune.thumbUrl).toBe('https://covers.openlibrary.org/b/id/12345-S.jpg')
@@ -65,5 +70,39 @@ describe('searchOpenLibrary', () => {
     expect(broken.ok === false && broken.error).toContain('503')
     const offline = await searchOpenLibrary('x', fakeFetch([]).fetchFn)
     expect(offline.ok === false && offline.error).toContain('Could not reach Open Library')
+  })
+})
+
+describe('genresFromSubjects', () => {
+  it('keeps only subjects that point to a real genre', () => {
+    expect(
+      genresFromSubjects([
+        'Fantasy fiction',
+        'Fantasy',
+        'Magic',
+        'Fiction',
+        'Large type books',
+        'Open Library Staff Picks'
+      ])
+    ).toEqual(['Fantasy'])
+  })
+
+  it('ranks by how many subjects point to a genre, at most three', () => {
+    const subjects = [
+      'Detective and mystery stories',
+      'Mystery fiction',
+      'Thrillers',
+      'Crime',
+      'Suspense',
+      'Horror tales'
+    ]
+    expect(genresFromSubjects(subjects)).toEqual(['Mystery', 'Thriller', 'Horror'])
+  })
+
+  it('tells history from historical fiction, and handles missing or odd input', () => {
+    expect(genresFromSubjects(['Historical fiction'])).toEqual(['Historical Fiction'])
+    expect(genresFromSubjects(['World history'])).toEqual(['History'])
+    for (const bad of [undefined, null, 'fantasy', 42, [1, null, {}]])
+      expect(genresFromSubjects(bad)).toEqual([])
   })
 })

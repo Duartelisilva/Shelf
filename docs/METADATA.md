@@ -17,7 +17,7 @@ searches TMDB (movies and series, with your own key from Settings) or Open Libra
   franchise suggestion "Alien".
 - TMDB's genres are spelled the way yours are when one matches ("Science Fiction"
   becomes "Sci-Fi" if you use that). Double genres for series ("Action & Adventure")
-  are split in two. Genres are not suggested for books.
+  are split in two. For books, genres are suggested from Open Library's subjects, but only those that match a short list of real genres (Fantasy, Mystery, Romance, History...), at most three.
 - Years outside 1901 to 2099 are never proposed (the same rule as everywhere else).
 - An applied poster is stored as the item's own image copy, like an image you chose.
 - After applying, the item remembers where the details came from in `meta`

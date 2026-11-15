@@ -137,7 +137,13 @@ function App(): React.JSX.Element {
         {notice && <p className="bg-warn-soft px-7 py-2 text-warn">{notice}</p>}
         {saveError && <p className="bg-danger-soft px-7 py-2 text-danger">{saveError}</p>}
         {view === 'settings' ? (
-          <SettingsScreen theme={theme} onTheme={changeTheme} onLibraryChanged={replaceLibrary} />
+          <SettingsScreen
+            theme={theme}
+            onTheme={changeTheme}
+            items={items}
+            onItemsChange={commit}
+            onLibraryChanged={replaceLibrary}
+          />
         ) : view === 'stats' ? (
           <StatsScreen items={items} />
         ) : (

@@ -21,7 +21,7 @@ Open a terminal **in the project folder** (`cd C:\Users\duart\Source\Repos\Shelf
 - [ ] `npm install` finishes without errors.
 - [ ] `npm run lint` prints no errors.
 - [ ] `npm run typecheck` prints no errors.
-- [ ] `npm test` ends with **23 test files** and **183 tests** passing, none failing.
+- [ ] `npm test` ends with **24 test files** and **198 tests** passing, none failing.
 
 ## 2. The exe
 
@@ -198,6 +198,20 @@ Click a card.
       (not in `npm run dev`).
 - [ ] When the app opens you briefly see the logo, "Shelf" and a moving bar before the library
       appears, in the colours of your theme.
+
+## 11d. Filters, names manager, book genres
+
+- [ ] **Filters** button opens a row with Year (from, to), Rating (5+ to 9+) and Missing
+      (No genre, No image, No rating). Each narrows the list; the button shows how many are on;
+      **Clear filters** resets them (and Favorites and the genre).
+- [ ] _Missing: No genre_ shows exactly the items without a genre (your movies to fill in).
+- [ ] **Settings, Genres, franchises and collections:** pick Movies, Series or Books and
+      Genres, Franchises or Collections. **Rename** changes it on every item of that type, and
+      only that type. Typing the name of another entry shows "Merges with...". **Remove**
+      asks first. Both show the **Undo** toast.
+- [ ] Renaming a franchise so that two items would become the same (same title, year and
+      franchise) is refused with a message.
+- [ ] **Look up online** for a **book** now also offers up to three genres (Fantasy, Mystery...).
 
 ## 12. When you are done
 

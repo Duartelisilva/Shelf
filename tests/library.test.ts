@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  activeFilterCount,
   applyFilters,
   formatDate,
   genreOptions,
@@ -167,5 +168,48 @@ describe('In progress section', () => {
     ]
     expect(sectionItems(list, 'in-progress').map((i) => i.title)).toEqual(['Dark', 'Hyperion'])
     expect(sectionCounts(list)['in-progress']).toBe(2)
+  })
+})
+
+describe('year, rating and missing filters', () => {
+  const base = { section: 'library' as const, query: '', genre: null, favoritesOnly: false }
+  const list: MediaItem[] = [
+    { ...items[0], year: 1979, rating: 9, genres: ['Horror'], image: 'a.png' },
+    { ...items[1], year: 1995, rating: 6, genres: [] },
+    { ...items[2], year: undefined, genres: [] }
+  ]
+  const titles = (filters: object): string[] =>
+    applyFilters(list, { ...base, ...filters }).map((i) => i.title)
+
+  it('limits by year, leaving out items that have none', () => {
+    expect(titles({ yearFrom: 1990 })).toEqual([list[1].title])
+    expect(titles({ yearTo: 1990 })).toEqual([list[0].title])
+    expect(titles({ yearFrom: 1979, yearTo: 1995 })).toEqual([list[0].title, list[1].title])
+  })
+
+  it('limits by minimum rating, leaving out unrated items', () => {
+    expect(titles({ minRating: 7 })).toEqual([list[0].title])
+    expect(titles({ minRating: 6 })).toEqual([list[0].title, list[1].title])
+  })
+
+  it('finds what is missing: genre, image, rating, and combinations', () => {
+    expect(titles({ missing: ['genre'] })).toEqual([list[1].title, list[2].title])
+    expect(titles({ missing: ['image'] })).toEqual([list[1].title, list[2].title])
+    expect(titles({ missing: ['rating'] })).toEqual([list[2].title])
+    expect(titles({ missing: ['genre', 'rating'] })).toEqual([list[2].title])
+  })
+
+  it('counts the filters that are on', () => {
+    expect(activeFilterCount({ favoritesOnly: false, genre: null })).toBe(0)
+    expect(
+      activeFilterCount({
+        favoritesOnly: true,
+        genre: null,
+        yearFrom: 1990,
+        yearTo: 2000,
+        minRating: 7,
+        missing: ['genre', 'image']
+      })
+    ).toBe(5)
   })
 })

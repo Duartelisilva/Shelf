@@ -21,6 +21,9 @@ Electron, React and TypeScript for a much better interface.
   Open Library for books): you see the matches, tick what you want, and nothing changes
   until you apply
 - **Genres, franchises and collections are separate for movies, series and books**
+- **Filters** for year, minimum rating and what is missing (no genre, no image, no rating)
+- **Names manager** in Settings: rename, merge or remove a genre, franchise or collection on every
+  item at once, per type, with undo
 - **Several items at once**: select items and set or remove a genre on all of them
 - **Stats** for movies, series and books: totals, top rated, items per year, most-followed
   franchises, top genres, most rewatched
