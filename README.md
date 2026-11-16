@@ -5,7 +5,7 @@ and the ones you want to. It is the successor of
 [MediaTracker](https://github.com/Duartelisilva/MediaTracker) (WPF), rebuilt with
 Electron, React and TypeScript for a much better interface.
 
-<!-- Add screenshots here once the app is running: docs/screenshots/library.png -->
+<img width="1919" height="1033" alt="image" src="https://github.com/user-attachments/assets/e094ee5c-3aa5-4d7d-b5a0-6452cec16bae" />
 
 ## Features
 
@@ -43,6 +43,8 @@ Electron, React and TypeScript for a much better interface.
 - **Your data stays on your computer**: one JSON file, saved safely, with a daily backup
 - **Settings** for the colour theme (five themes, or match Windows light and dark) and the
   optional TMDB key, stored encrypted by Windows
+
+<img width="988" height="772" alt="image" src="https://github.com/user-attachments/assets/3bff1a0e-889d-45d2-8b3e-dbc1f8105fa1" />
 
 ## Download and run
 
